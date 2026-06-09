@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Badgers on Boats</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="topbar" aria-label="Main navigation">
+        <a class="brand" href="#signup">Badgers on Boats</a>
+        <div class="nav-actions">
+          <a href="#signup">Sign up</a>
+          <a href="#admin">Admin</a>
+        </div>
+      </nav>
+      <div class="hero-content">
+        <p class="kicker" id="tripDate">Date options coming soon</p>
+        <h1 id="tripTitle">Kayak weekend</h1>
+        <p id="tripIntro">Add your details so we can plan boats, food, rides, and costs.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#signup">Add my info</a>
+          <a class="button ghost" href="#guests">See who's coming</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="details-band" aria-label="Trip details">
+        <div class="metric">
+          <span>Destination</span>
+          <strong id="tripLocation">To be decided</strong>
+        </div>
+        <div class="metric">
+          <span>Meeting point</span>
+          <strong id="tripMeeting">To be decided</strong>
+        </div>
+        <div class="metric">
+          <span>People</span>
+          <strong id="peopleCount">0</strong>
+        </div>
+        <div class="metric">
+          <span>Estimated share</span>
+          <strong id="publicCost">0 EUR</strong>
+        </div>
+      </section>
+
+      <section class="section-grid" id="signup">
+        <div>
+          <p class="eyebrow">Join the trip</p>
+          <h2>Add your information</h2>
+          <p class="section-copy">
+            This keeps the group list tidy for ride planning, boat choices, food shopping, and final cost splitting.
+          </p>
+        </div>
+        <form class="panel" id="guestForm">
+          <div class="field two">
+            <label>Name <input name="name" autocomplete="name" required /></label>
+            <label>Phone <input name="phone" autocomplete="tel" required /></label>
+          </div>
+          <label>Email <input name="email" type="email" autocomplete="email" /></label>
+          <div class="field two">
+            <label>Preferred date
+              <select name="datePreference" id="datePreference"></select>
+            </label>
+            <label>Preferred place
+              <select name="placePreference" id="placePreference"></select>
+            </label>
+          </div>
+          <label>Stay overnight?
+            <select name="stayOvernight">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
+          <h3>Transport</h3>
+          <div class="field two">
+            <label>Getting there
+              <select name="transportThere">
+                <option value="need-ride">I need a ride</option>
+                <option value="driving">I can drive</option>
+                <option value="passenger-arranged">I already have a ride</option>
+                <option value="other">Other / not sure</option>
+              </select>
+            </label>
+            <label>Free seats there
+              <input name="seatsThere" type="number" min="0" value="0" />
+            </label>
+          </div>
+          <div class="field two">
+            <label>Coming back
+              <select name="transportBack">
+                <option value="need-ride">I need a ride</option>
+                <option value="driving">I can drive</option>
+                <option value="passenger-arranged">I already have a ride</option>
+                <option value="other">Other / not sure</option>
+              </select>
+            </label>
+            <label>Free seats back
+              <input name="seatsBack" type="number" min="0" value="0" />
+            </label>
+          </div>
+          <div class="field two">
+            <label>Departure area <input name="departureArea" placeholder="Area, city, neighborhood" /></label>
+            <label>Departure time <input name="departureTime" placeholder="Morning, 18:00, flexible..." /></label>
+          </div>
+          <div class="field two">
+            <label>Return time <input name="returnTime" placeholder="Same day, Sunday morning..." /></label>
+            <label>Already riding with <input name="rideWith" placeholder="Name(s), if already arranged" /></label>
+          </div>
+          <div class="toggle-row">
+            <input id="plusOne" name="plusOne" type="checkbox" />
+            <label for="plusOne">I am bringing a plus one</label>
+          </div>
+          <label>Plus one name <input name="plusOneName" /></label>
+          <h3>Boat matching</h3>
+          <div class="field two">
+            <label>Experience level
+              <select name="experienceLevel">
+                <option value="beginner">Beginner</option>
+                <option value="okay" selected>Okay / casual</option>
+                <option value="confident">Confident paddler</option>
+              </select>
+            </label>
+            <label>Boat partner
+              <select name="boatPartnerStatus">
+                <option value="match-me">Please match me</option>
+                <option value="have-partner">I already have a partner</option>
+                <option value="solo-only">I prefer solo only</option>
+                <option value="no-preference">No preference</option>
+              </select>
+            </label>
+          </div>
+          <div class="field two">
+            <label>Partner name <input name="boatPartnerName" placeholder="If already decided" /></label>
+            <label>Prefer to share with <input name="boatSharePreference" placeholder="Optional name / preference" /></label>
+          </div>
+          <label>Can organisers match you?
+            <select name="okayToMatch">
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <div class="field two">
+            <label>Food preferences
+              <textarea name="food" rows="4" placeholder="Vegetarian, allergies, favorite snacks..."></textarea>
+            </label>
+            <label>Allergies
+              <textarea name="allergies" rows="4" placeholder="Important allergies or medical food notes"></textarea>
+            </label>
+          </div>
+          <div class="field two">
+            <label>Boat preference
+              <select name="boat">
+                <option value="no-preference">No preference</option>
+                <option value="solo">Solo kayak</option>
+                <option value="tandem">Tandem kayak</option>
+                <option value="experienced">Experienced paddler</option>
+                <option value="beginner">Beginner-friendly boat</option>
+              </select>
+            </label>
+            <label>Gear you can bring
+              <textarea name="gearHave" rows="4" placeholder="Dry bag, tent, stove, first aid..."></textarea>
+            </label>
+          </div>
+          <label>Gear you need <textarea name="gearNeed" rows="3" placeholder="Tent spot, dry bag, life jacket..."></textarea></label>
+          <label>Notes <textarea name="notes" rows="3" placeholder="Arrival time, gear, questions..."></textarea></label>
+          <button class="button primary" type="submit">Save my spot</button>
+          <p class="form-status" id="guestStatus" role="status"></p>
+        </form>
+      </section>
+
+      <section class="section-grid" id="guests">
+        <div>
+          <p class="eyebrow">Group view</p>
+          <h2>Who's coming</h2>
+          <p class="section-copy">A quick public overview. Phone numbers and emails stay visible only in admin.</p>
+        </div>
+        <div class="guest-list" id="guestList"></div>
+      </section>
+
+      <section class="admin-section" id="admin">
+        <div class="admin-head">
+          <div>
+            <p class="eyebrow">Admin</p>
+            <h2>Trip control panel</h2>
+          </div>
+          <form class="login" id="adminLogin">
+            <input name="pin" type="password" placeholder="Admin pin" required />
+            <button class="button secondary" type="submit">Unlock</button>
+          </form>
+        </div>
+
+        <div class="admin-grid hidden" id="adminPanel">
+          <form class="panel" id="settingsForm">
+            <h3>Trip settings</h3>
+            <label>Title <input name="title" /></label>
+            <div class="field two">
+              <label>Date note <input name="date" placeholder="Date options coming soon" /></label>
+              <label>Destination <input name="location" placeholder="Leave blank until decided" /></label>
+            </div>
+            <label>Meeting point <input name="meetingPoint" placeholder="Leave blank until decided" /></label>
+            <div class="field two">
+              <label>Date options
+                <textarea name="dateOptions" rows="4" placeholder="One option per line"></textarea>
+              </label>
+              <label>Place options
+                <textarea name="placeOptions" rows="4" placeholder="One option per line"></textarea>
+              </label>
+            </div>
+            <label>Intro <textarea name="intro" rows="3"></textarea></label>
+            <h3>Cost model</h3>
+            <div class="field two">
+              <label>Fixed costs <input name="fixedCosts" type="number" min="0" step="1" /></label>
+              <label>Cost per person <input name="perPersonCost" type="number" min="0" step="1" /></label>
+            </div>
+            <div class="field two">
+              <label>Cost per car <input name="perCarCost" type="number" min="0" step="1" /></label>
+              <label>Deposit per person <input name="depositPerPerson" type="number" min="0" step="1" /></label>
+            </div>
+            <label>Currency <input name="currency" maxlength="8" /></label>
+            <button class="button primary" type="submit">Save settings</button>
+            <p class="form-status" id="settingsStatus" role="status"></p>
+          </form>
+
+          <div class="panel">
+            <h3>Cost estimate</h3>
+            <div class="cost-grid" id="costGrid"></div>
+          </div>
+
+          <div class="panel wide">
+            <h3>Transport board</h3>
+            <div class="admin-board" id="transportBoard"></div>
+          </div>
+
+          <div class="panel wide">
+            <h3>Boat matching board</h3>
+            <div class="admin-board" id="boatBoard"></div>
+          </div>
+
+          <div class="panel wide">
+            <h3>Guest details</h3>
+            <div class="admin-guests" id="adminGuests"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

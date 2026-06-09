@@ -1,0 +1,610 @@
+:root {
+  color-scheme: light;
+  --ink: #111315;
+  --muted: #6c7378;
+  --paper: #f6f4ee;
+  --panel: #fffdf8;
+  --line: #cfd9dc;
+  --line-strong: #1a1d1f;
+  --blue: #b9dce8;
+  --blue-soft: #e5f1f5;
+  --blue-deep: #315f72;
+  --summer: #dfe8c4;
+  --sun: #f4d27a;
+  --coral: #d97866;
+  --navy: #1d3557;
+  --shadow: 0 18px 42px rgba(17, 19, 21, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(185, 220, 232, 0.42), rgba(246, 244, 238, 0) 420px),
+    linear-gradient(135deg, rgba(244, 210, 122, 0.2), rgba(246, 244, 238, 0) 34%),
+    var(--paper);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  color: var(--ink);
+  background:
+    linear-gradient(90deg, rgba(246, 244, 238, 0.94), rgba(246, 244, 238, 0.66), rgba(246, 244, 238, 0.08)),
+    url("/assets/kayak-summer-hero.png") center / cover;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 24%;
+  background: linear-gradient(180deg, rgba(246, 244, 238, 0), var(--paper));
+  pointer-events: none;
+}
+
+.topbar {
+  width: min(1160px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 22px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.brand {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.96rem;
+  font-weight: 760;
+}
+
+.brand::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  margin-right: 10px;
+  background: var(--summer);
+  border: 1px solid var(--line-strong);
+}
+
+.nav-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nav-actions a,
+.button {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  padding: 0 16px;
+  font-weight: 720;
+  cursor: pointer;
+}
+
+.nav-actions a {
+  background: rgba(255, 253, 248, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.hero-content {
+  width: min(1160px, calc(100% - 32px));
+  margin: auto auto 13vh;
+  position: relative;
+  z-index: 1;
+}
+
+.kicker,
+.eyebrow {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 14px;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--blue-deep);
+  padding-bottom: 5px;
+  font-weight: 760;
+  text-transform: uppercase;
+  font-size: 0.76rem;
+  letter-spacing: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 740px;
+  margin-bottom: 20px;
+  font-size: clamp(3rem, 8.2vw, 6.7rem);
+  line-height: 0.94;
+  letter-spacing: 0;
+  font-weight: 760;
+  text-wrap: balance;
+}
+
+.hero-content p:not(.kicker) {
+  max-width: 590px;
+  color: #303638;
+  font-size: 1.06rem;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+
+.button.primary {
+  background: var(--ink);
+  color: white;
+}
+
+.button.secondary {
+  background: var(--blue-deep);
+  color: white;
+  border-color: var(--blue-deep);
+}
+
+.button.ghost {
+  background: rgba(255, 253, 248, 0.66);
+  color: var(--ink);
+}
+
+.button:hover,
+.nav-actions a:hover {
+  background: #f6f0d5;
+}
+
+.button.primary:hover,
+.button.secondary:hover {
+  filter: brightness(0.94);
+}
+
+.details-band {
+  width: min(1160px, calc(100% - 32px));
+  margin: -68px auto 0;
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line-strong);
+  background: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+
+.metric {
+  min-height: 114px;
+  padding: 20px;
+  background: rgba(255, 253, 248, 0.96);
+}
+
+.metric:nth-child(2) {
+  background: #eef7fa;
+}
+
+.metric:nth-child(3) {
+  background: #f7f8e9;
+}
+
+.metric:nth-child(4) {
+  background: #f9efea;
+}
+
+.metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 760;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.metric strong {
+  display: block;
+  font-size: 1.1rem;
+  line-height: 1.32;
+  overflow-wrap: anywhere;
+}
+
+main {
+  padding-bottom: 72px;
+}
+
+.section-grid,
+.admin-section {
+  width: min(1160px, calc(100% - 32px));
+  margin: 86px auto 0;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.62fr) minmax(0, 1.38fr);
+  gap: 42px;
+  align-items: start;
+}
+
+h2 {
+  font-size: clamp(2.2rem, 4.8vw, 3.8rem);
+  line-height: 1;
+  letter-spacing: 0;
+  margin-bottom: 18px;
+  font-weight: 760;
+  text-wrap: balance;
+}
+
+h3 {
+  font-size: 1.16rem;
+  margin-bottom: 18px;
+  font-weight: 760;
+}
+
+.section-copy {
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 380px;
+}
+
+.panel,
+.guest-card,
+.admin-card,
+.cost-item {
+  background: rgba(255, 253, 248, 0.96);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  padding: 26px;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 680;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #bfcace;
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  min-height: 46px;
+  padding: 11px 12px;
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue-deep);
+  box-shadow: 0 0 0 4px rgba(185, 220, 232, 0.62);
+}
+
+.field.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.toggle-row {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #bfcace;
+  border-radius: 6px;
+  background: var(--blue-soft);
+}
+
+.toggle-row input {
+  width: 20px;
+  min-height: 20px;
+  accent-color: var(--blue-deep);
+}
+
+.toggle-row label {
+  display: block;
+}
+
+.form-status {
+  color: var(--blue-deep);
+  min-height: 22px;
+  margin: 0;
+  font-weight: 720;
+}
+
+.guest-list,
+.admin-guests,
+.cost-grid,
+.admin-board {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-board {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.board-column {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.56);
+  padding: 14px;
+}
+
+.board-column h4 {
+  margin-bottom: 12px;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+}
+
+.board-column ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.board-column li {
+  display: grid;
+  gap: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.board-column li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.board-column span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.guest-card,
+.admin-card,
+.cost-item {
+  padding: 18px;
+}
+
+.guest-card h3,
+.admin-card h4 {
+  margin: 0 0 8px;
+}
+
+.guest-card p,
+.admin-card p {
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.chip {
+  border: 1px solid #bfcace;
+  border-radius: 999px;
+  background: var(--blue-soft);
+  color: var(--blue-deep);
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 720;
+}
+
+.chip:nth-child(3n) {
+  background: #f6f0d5;
+  color: #6f5a20;
+}
+
+.admin-section {
+  background: linear-gradient(135deg, #eff7fa, #fffdf8);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 32px;
+  box-shadow: var(--shadow);
+}
+
+.admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.login {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.login input {
+  width: 190px;
+  background: white;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.76fr);
+  gap: 18px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.cost-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cost-item span {
+  color: var(--muted);
+  font-weight: 680;
+}
+
+.cost-item strong {
+  font-size: 1.28rem;
+}
+
+.admin-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.5fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-card dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.admin-card dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.admin-card dd {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.danger {
+  background: #f8efea;
+  color: #834237;
+  border-color: #d6b4aa;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 780px) {
+  .hero {
+    min-height: 82vh;
+    background:
+      linear-gradient(90deg, rgba(246, 244, 238, 0.94), rgba(246, 244, 238, 0.58), rgba(246, 244, 238, 0.12)),
+      url("/assets/kayak-summer-hero.png") 58% center / cover;
+  }
+
+  .topbar,
+  .hero-content,
+  .details-band,
+  .section-grid,
+  .admin-section {
+    width: min(100% - 24px, 1160px);
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .nav-actions {
+    gap: 6px;
+  }
+
+  .nav-actions a {
+    padding: 0 10px;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 15vw, 4.4rem);
+  }
+
+  .details-band {
+    margin-top: -58px;
+  }
+
+  .details-band,
+  .section-grid,
+  .admin-grid,
+  .admin-board,
+  .field.two,
+  .admin-card,
+  .admin-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .metric {
+    min-height: 92px;
+  }
+
+  .admin-section {
+    padding: 22px 16px;
+  }
+
+  .admin-head {
+    display: grid;
+    align-items: start;
+  }
+}
