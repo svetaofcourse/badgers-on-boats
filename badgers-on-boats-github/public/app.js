@@ -1,8 +1,29 @@
 let state = null;
 let adminPin = "";
+let currentStep = 0;
+let plusOneCount = 0;
+
+const totalSteps = 9;
+const formState = {
+  options: {
+    has_plus_ones: "no",
+    can_drive: "no",
+    kayak_experience: "intermediate",
+    staying_overnight: "no",
+    eating_group_food: "yes",
+    dietary_pref: "meat",
+    wants_drinks: "no",
+    wants_sauna: "no"
+  },
+  dateAvailability: {},
+  helpWith: []
+};
 
 const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const fmt = (value) => `${Math.round(value)} ${state?.costs.currency || "EUR"}`;
+
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -18,20 +39,24 @@ async function api(path, options = {}) {
 }
 
 function participantCount() {
-  return state.guests.reduce((sum, guest) => sum + 1 + (guest.plusOne ? 1 : 0), 0);
+  return state.guests.reduce((sum, guest) => sum + 1 + (guest.plusOnes?.length || (guest.plusOne ? 1 : 0)), 0);
 }
 
-function carCount() {
-  return state.guests.filter((guest) => guest.transportThere === "driving" || guest.transportBack === "driving" || guest.comingByCar).length;
+function driverCount() {
+  return state.guests.filter((guest) => ["yes", "bolt_drive"].includes(guest.canDrive)).length;
+}
+
+function seatCount() {
+  return state.guests.reduce((sum, guest) => sum + (["yes", "bolt_drive"].includes(guest.canDrive) ? Number(guest.totalSeats || 0) : 0), 0);
 }
 
 function overnightCount() {
-  return state.guests.reduce((sum, guest) => sum + (guest.stayOvernight ? 1 + (guest.plusOne ? 1 : 0) : 0), 0);
+  return state.guests.filter((guest) => guest.stayingOvernight === "yes" || guest.stayOvernight).length;
 }
 
 function calculateCosts() {
   const people = participantCount();
-  const cars = carCount();
+  const cars = driverCount();
   const total =
     Number(state.costs.fixedCosts || 0) +
     people * Number(state.costs.perPersonCost || 0) +
@@ -40,103 +65,324 @@ function calculateCosts() {
     people,
     cars,
     total,
-    perPerson: people ? total / people : 0,
-    deposits: people * Number(state.costs.depositPerPerson || 0)
+    perPerson: people ? total / people : 0
   };
 }
 
-function peopleInParty(guest) {
-  return 1 + (guest.plusOne ? 1 : 0);
+function renderTripView() {
+  $(".logo").innerHTML = `<span>${escapeHtml(firstWord(state.trip.title || "Bolt"))}</span> ${escapeHtml(restWords(state.trip.title || "Kayak Trip"))} <strong>2026</strong>`;
+  renderDateGrid();
+  renderParticipantDatalist();
+  renderGuestList();
+  updateNav();
 }
 
-function transportSummary(direction) {
-  const transportKey = direction === "there" ? "transportThere" : "transportBack";
-  const seatsKey = direction === "there" ? "seatsThere" : "seatsBack";
-  const needingRide = state.guests.reduce((sum, guest) => sum + (guest[transportKey] === "need-ride" ? peopleInParty(guest) : 0), 0);
-  const seats = state.guests.reduce((sum, guest) => sum + (guest[transportKey] === "driving" ? Number(guest[seatsKey] || 0) : 0), 0);
-  return { needingRide, seats, balance: seats - needingRide };
+function firstWord(value) {
+  return String(value).split(" ")[0] || "Bolt";
 }
 
-function signedCount(value) {
-  if (value > 0) return `+${value} seats`;
-  if (value < 0) return `${Math.abs(value)} need seats`;
-  return "Matched";
+function restWords(value) {
+  const words = String(value).split(" ");
+  return words.slice(1).join(" ") || "Kayak Trip";
 }
 
-function topChoice(guests, key, options) {
-  const counts = new Map();
-  guests.forEach((guest) => {
-    const value = guest[key];
-    if (!value || value === "decide-later") return;
-    counts.set(value, (counts.get(value) || 0) + 1 + (guest.plusOne ? 1 : 0));
-  });
-  const winner = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0];
-  if (!winner) return "No votes yet";
-  const label = options.includes(winner[0]) ? winner[0] : winner[0];
-  return `${label} (${winner[1]})`;
-}
-
-function updateTripView() {
-  $("#tripTitle").textContent = state.trip.title;
-  $("#tripDate").textContent = state.trip.date || "Date options coming soon";
-  $("#tripIntro").textContent = state.trip.intro;
-  $("#tripLocation").textContent = state.trip.location || "To be decided";
-  $("#tripMeeting").textContent = state.trip.meetingPoint || "To be decided";
-  $("#peopleCount").textContent = calculateCosts().people;
-  $("#publicCost").textContent = fmt(calculateCosts().perPerson);
-}
-
-function renderChoiceSelects() {
-  renderOptions($("#datePreference"), [
-    ["decide-later", state.trip.dateOptions.length ? "Choose later" : "Dates will be added soon"],
-    ["any", "Any proposed date works"],
-    ...state.trip.dateOptions.map((option) => [option, option])
-  ]);
-  renderOptions($("#placePreference"), [
-    ["decide-later", state.trip.placeOptions.length ? "Choose later" : "Places will be added soon"],
-    ["any", "Any proposed place works"],
-    ...state.trip.placeOptions.map((option) => [option, option])
-  ]);
-}
-
-function renderOptions(select, options) {
-  const current = select.value;
-  select.innerHTML = options
-    .map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`)
+function renderDateGrid() {
+  const dates = state.trip.dateOptions?.length ? state.trip.dateOptions : [];
+  $("#dateGrid").innerHTML = dates
+    .map(
+      (date) => `<div class="date-row" data-date="${escapeHtml(date)}">
+        <div class="date-label">${escapeHtml(date)}</div>
+        <div class="date-options">
+          <button class="date-btn" data-avail="yes" type="button" title="Yes">✓</button>
+          <button class="date-btn" data-avail="maybe" type="button" title="Maybe">~</button>
+          <button class="date-btn" data-avail="no" type="button" title="No">×</button>
+        </div>
+      </div>`
+    )
     .join("");
-  if (options.some(([value]) => value === current)) select.value = current;
 }
 
-function chip(text) {
-  return `<span class="chip">${text}</span>`;
+function renderParticipantDatalist() {
+  $("#participantList").innerHTML = state.guests.map((guest) => `<option value="${escapeHtml(guest.name)}"></option>`).join("");
+}
+
+function goToStep(step) {
+  const target = Math.max(0, Math.min(totalSteps, step));
+  const previous = $(".step.active");
+  const next = $(`.step[data-step="${target}"]`);
+  if (!next) return;
+  previous?.classList.remove("active");
+  next.classList.add("active");
+  currentStep = target;
+  if (currentStep === totalSteps) buildReview();
+  updateNav();
+  window.scrollTo({ top: 0 });
+  setTimeout(() => {
+    next.querySelector("input, textarea, select")?.focus({ preventScroll: true });
+  }, 160);
+}
+
+function nextStep() {
+  if (currentStep === totalSteps) {
+    submitGuest();
+    return;
+  }
+  if (currentStep > 0 && !validateStep(currentStep)) return;
+  goToStep(currentStep + 1);
+}
+
+function prevStep() {
+  if (currentStep > 0) goToStep(currentStep - 1);
+}
+
+function updateNav() {
+  const nav = $("#formNav");
+  const prev = $("#prevBtn");
+  const next = $("#nextBtn");
+  const counter = $("#stepCounter");
+  nav.style.display = currentStep === 0 ? "none" : "flex";
+  prev.style.visibility = currentStep <= 1 ? "hidden" : "visible";
+  counter.textContent = currentStep === 0 ? "" : `Step ${currentStep} of ${totalSteps}`;
+  $("#progressFill").style.width = currentStep === 0 ? "0%" : `${(currentStep / totalSteps) * 100}%`;
+  if (currentStep === totalSteps) {
+    next.textContent = "Submit";
+    next.classList.add("submit");
+    next.classList.remove("primary");
+  } else {
+    next.textContent = "Continue →";
+    next.classList.add("primary");
+    next.classList.remove("submit");
+  }
+}
+
+function validateStep(step) {
+  const stepEl = $(`.step[data-step="${step}"]`);
+  const invalid = stepEl.querySelector(":invalid");
+  if (!invalid) return true;
+  invalid.reportValidity();
+  return false;
+}
+
+function selectOption(card) {
+  const field = card.dataset.field;
+  const value = card.dataset.value;
+  card.parentElement.querySelectorAll(".option-card").forEach((item) => item.classList.remove("selected"));
+  card.classList.add("selected");
+  formState.options[field] = value;
+
+  if (field === "has_plus_ones") {
+    toggle("plusOneSection", value === "yes");
+    if (value === "yes" && !$("#plusOneList").children.length) addPlusOne();
+  }
+  if (field === "can_drive") toggle("driverSection", value === "yes" || value === "bolt_drive");
+  if (field === "staying_overnight") toggle("overnightSection", value === "yes" || value === "maybe");
+  if (field === "eating_group_food") toggle("foodSection", value === "yes");
+}
+
+function toggle(id, show) {
+  $(`#${id}`)?.classList.toggle("show", show);
+}
+
+function setDateAvailability(button) {
+  const row = button.closest(".date-row");
+  const date = row.dataset.date;
+  const availability = button.dataset.avail;
+  row.querySelectorAll(".date-btn").forEach((item) => item.classList.remove("yes", "maybe", "no"));
+  button.classList.add(availability);
+  row.classList.add("has-selection");
+  formState.dateAvailability[date] = availability;
+}
+
+function addPlusOne() {
+  plusOneCount += 1;
+  const id = `plus_one_${plusOneCount}`;
+  const card = document.createElement("div");
+  card.className = "plus-one-card";
+  card.id = id;
+  card.innerHTML = `<div class="plus-one-header">
+      <h4>+1 #${plusOneCount}</h4>
+      <button class="remove-btn" data-remove-plus-one="${id}" type="button" aria-label="Remove plus one">×</button>
+    </div>
+    <label class="field-group">Name * <input class="po-name" placeholder="Full name" /></label>
+    <label class="field-group">Phone <small>For the group chat</small><input class="po-phone" type="tel" placeholder="+372..." /></label>`;
+  $("#plusOneList").appendChild(card);
+}
+
+function toggleHelp(chip) {
+  const value = chip.dataset.help;
+  chip.classList.toggle("selected");
+  if (chip.classList.contains("selected")) {
+    if (!formState.helpWith.includes(value)) formState.helpWith.push(value);
+  } else {
+    formState.helpWith = formState.helpWith.filter((item) => item !== value);
+  }
+}
+
+function collectData() {
+  const startingFrom = $("#f_starting_from").value;
+  const customStart = $("#f_starting_from_custom").value.trim();
+  const plusOnes = $$(".plus-one-card")
+    .map((card) => ({
+      name: card.querySelector(".po-name").value.trim(),
+      phone: card.querySelector(".po-phone").value.trim()
+    }))
+    .filter((item) => item.name);
+
+  return {
+    name: $("#f_name").value.trim(),
+    email: $("#f_email").value.trim(),
+    phone: $("#f_phone").value.trim(),
+    plus_ones: plusOnes,
+    date_availability: formState.dateAvailability,
+    can_drive: formState.options.can_drive || "no",
+    total_seats: $("#f_total_seats").value || null,
+    starting_from: startingFrom === "other" ? customStart : startingFrom,
+    preferred_car_buddy: $("#f_preferred_car_buddy").value.trim(),
+    kayak_partner_pref: $("#f_kayak_partner").value.trim(),
+    kayak_experience: formState.options.kayak_experience || "",
+    staying_overnight: formState.options.staying_overnight || "no",
+    has_tent: formState.options.has_tent || "",
+    has_sleeping_bag: formState.options.has_sleeping_bag || "",
+    eating_group_food: formState.options.eating_group_food !== "no",
+    dietary_pref: formState.options.dietary_pref || "meat",
+    allergies: $("#f_allergies").value.trim(),
+    wants_drinks: formState.options.wants_drinks || "no",
+    wants_sauna: formState.options.wants_sauna === "yes",
+    tshirt_size: formState.options.tshirt_size || "",
+    can_help_with: formState.helpWith,
+    comments: $("#f_comments").value.trim(),
+    emergency_contact_name: $("#f_emergency_name").value.trim(),
+    emergency_contact_phone: $("#f_emergency_phone").value.trim()
+  };
+}
+
+function buildReview() {
+  const data = collectData();
+  const datesYes = Object.entries(data.date_availability)
+    .filter(([, value]) => value === "yes")
+    .map(([date]) => date);
+  const datesMaybe = Object.entries(data.date_availability)
+    .filter(([, value]) => value === "maybe")
+    .map(([date]) => date);
+  const drinksLabel = { yes: "Yes", soft: "Soft drinks only", no: "No thanks" }[data.wants_drinks] || data.wants_drinks;
+
+  $("#reviewContent").innerHTML = [
+    reviewSection("About You", 1, [
+      ["Name", data.name],
+      ["Email", data.email],
+      ["Phone", data.phone],
+      ["+1s", data.plus_ones.map((item) => item.name).join(", ") || "None"]
+    ]),
+    reviewSection("Availability", 3, [
+      ["Yes", datesYes.join(", ") || "None"],
+      ["Maybe", datesMaybe.join(", ") || "None"]
+    ]),
+    reviewSection("Transportation", 4, [
+      ["Driver", `${data.can_drive}${data.total_seats ? ` (${data.total_seats} seats)` : ""}`],
+      ["Starting from", data.starting_from || "Not set"],
+      ["Ride buddy", data.preferred_car_buddy || "No preference"]
+    ]),
+    reviewSection("Kayaking", 5, [
+      ["Partner", data.kayak_partner_pref || "Assign me"],
+      ["Experience", data.kayak_experience || "Not set"]
+    ]),
+    reviewSection("Overnight and Food", 6, [
+      ["Staying", data.staying_overnight],
+      ["Tent", data.has_tent || "-"],
+      ["Food", data.eating_group_food ? data.dietary_pref : "Bringing own"],
+      ["Allergies", data.allergies || "-"],
+      ["Drinks", drinksLabel],
+      ["Sauna", data.wants_sauna ? "Yes" : "No"]
+    ]),
+    reviewSection("Extras", 8, [
+      ["T-shirt", data.tshirt_size || "-"],
+      ["Helping with", data.can_help_with.join(", ") || "-"],
+      ["Emergency", data.emergency_contact_name ? `${data.emergency_contact_name} (${data.emergency_contact_phone || "no phone"})` : "-"],
+      ["Notes", data.comments || "-"]
+    ])
+  ].join("");
+}
+
+function reviewSection(title, step, rows) {
+  return `<section class="review-section">
+    <div class="review-section-header">
+      <h4>${escapeHtml(title)}</h4>
+      <button class="review-edit-btn" data-review-step="${step}" type="button">Edit</button>
+    </div>
+    ${rows.map(([label, value]) => `<div class="review-row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value)}</span></div>`).join("")}
+  </section>`;
+}
+
+async function submitGuest() {
+  const button = $("#nextBtn");
+  const data = collectData();
+  try {
+    button.disabled = true;
+    button.textContent = "Submitting...";
+    state = await api("/api/guests", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+    $("#app").classList.add("hidden");
+    $("#successPanel").classList.remove("hidden");
+    $("#guestStatus").textContent = "";
+    renderTripView();
+  } catch (error) {
+    $("#guestStatus").textContent = error.message;
+  } finally {
+    button.disabled = false;
+    updateNav();
+  }
+}
+
+function resetFormFlow() {
+  $("#guestForm").reset();
+  $("#plusOneList").innerHTML = "";
+  plusOneCount = 0;
+  formState.dateAvailability = {};
+  formState.helpWith = [];
+  formState.options = {
+    has_plus_ones: "no",
+    can_drive: "no",
+    kayak_experience: "intermediate",
+    staying_overnight: "no",
+    eating_group_food: "yes",
+    dietary_pref: "meat",
+    wants_drinks: "no",
+    wants_sauna: "no"
+  };
+  $$(".selected").forEach((item) => item.classList.remove("selected"));
+  $$('[data-field="has_plus_ones"][data-value="no"], [data-field="can_drive"][data-value="no"], [data-field="kayak_experience"][data-value="intermediate"], [data-field="staying_overnight"][data-value="no"], [data-field="eating_group_food"][data-value="yes"], [data-field="dietary_pref"][data-value="meat"], [data-field="wants_drinks"][data-value="no"], [data-field="wants_sauna"][data-value="no"]').forEach((item) => item.classList.add("selected"));
+  $$(".conditional").forEach((item) => item.classList.remove("show"));
+  $("#foodSection").classList.add("show");
+  renderDateGrid();
+  $("#successPanel").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  goToStep(0);
 }
 
 function renderGuestList() {
   const list = $("#guestList");
   if (!state.guests.length) {
-    list.innerHTML = `<article class="guest-card"><h3>No sign-ups yet</h3><p>Be the first to add your info.</p></article>`;
+    list.innerHTML = `<article class="guest-card"><h3>No registrations yet</h3><p>Be the first to sign up.</p></article>`;
     return;
   }
-
   list.innerHTML = state.guests
-    .map((guest) => {
-      const party = 1 + (guest.plusOne ? 1 : 0);
-      return `<article class="guest-card">
-        <h3>${escapeHtml(guest.name)}</h3>
-        <p>${party} ${party === 1 ? "person" : "people"} ${guest.plusOneName ? `with ${escapeHtml(guest.plusOneName)}` : ""}</p>
-        <div class="chips">
-          ${chip(guest.comingByCar ? `Car, ${guest.carSeats} free seats` : "No car")}
-          ${chip(labelDate(guest.datePreference))}
-          ${chip(labelPlace(guest.placePreference))}
-          ${chip(guest.stayOvernight ? "Overnight" : "No overnight")}
-          ${chip(labelTransport(guest.transportThere, "there"))}
-          ${chip(labelTransport(guest.transportBack, "back"))}
-          ${chip(labelBoat(guest.boat))}
-          ${guest.food ? chip("Food notes") : ""}
-        </div>
-      </article>`;
-    })
+    .map((guest) => `<article class="guest-card">
+      <h3>${escapeHtml(guest.name)}</h3>
+      <p>${guest.plusOneName ? `With ${escapeHtml(guest.plusOneName)}` : "Solo registration"}</p>
+      <div class="chips">
+        ${chip(labelDriver(guest.canDrive))}
+        ${chip(labelStay(guest.stayingOvernight))}
+        ${chip(labelExperience(guest.kayakExperience))}
+        ${guest.dietaryPref ? chip(guest.dietaryPref) : ""}
+      </div>
+    </article>`)
     .join("");
+}
+
+function chip(text) {
+  return `<span class="chip">${escapeHtml(text)}</span>`;
 }
 
 function fillSettingsForm() {
@@ -148,231 +394,176 @@ function fillSettingsForm() {
   });
 }
 
+function renderAdmin() {
+  $("#adminCount").textContent = `${state.guests.length} registered`;
+  renderCosts();
+  renderDateSummary();
+  renderTransportBoard();
+  renderAdminGuests();
+}
+
 function renderCosts() {
   const costs = calculateCosts();
-  const there = transportSummary("there");
-  const back = transportSummary("back");
+  const diet = countBy(state.guests.filter((guest) => guest.eatingGroupFood), "dietaryPref");
   $("#costGrid").innerHTML = [
-    ["Participants", costs.people],
-    ["Cars", costs.cars],
-    ["Staying overnight", overnightCount()],
-    ["Ride balance there", signedCount(there.balance)],
-    ["Ride balance back", signedCount(back.balance)],
-    ["Top date", topChoice(state.guests, "datePreference", state.trip.dateOptions)],
-    ["Top place", topChoice(state.guests, "placePreference", state.trip.placeOptions)],
-    ["Total estimate", fmt(costs.total)],
-    ["Per person", fmt(costs.perPerson)],
-    ["Deposits to collect", fmt(costs.deposits)]
+    ["Registered", state.guests.length],
+    ["People", costs.people],
+    ["Drivers", driverCount()],
+    ["Total seats", seatCount()],
+    ["Overnight", overnightCount()],
+    ["Need tent", state.guests.filter((guest) => guest.stayingOvernight === "yes" && guest.hasTent === "no").length],
+    ["Meat", diet.meat || 0],
+    ["Veg/Vegan", (diet.vegetarian || 0) + (diet.vegan || 0)],
+    ["Per person est.", fmt(costs.perPerson)]
   ]
-    .map(([label, value]) => `<div class="cost-item"><span>${label}</span><strong>${value}</strong></div>`)
+    .map(([label, value]) => `<div class="stat-card"><div class="stat-value">${escapeHtml(value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`)
     .join("");
 }
 
-function renderBoards() {
-  const transportBoard = $("#transportBoard");
-  const boatBoard = $("#boatBoard");
-  if (!transportBoard || !boatBoard) return;
+function renderDateSummary() {
+  const summaries = dateSummaries();
+  const maxScore = Math.max(1, ...summaries.map((item) => item.score));
+  $("#dateSummary").innerHTML = summaries
+    .map((item) => `<div class="date-rank-bar">
+      <div class="date-rank-label">${escapeHtml(item.date)}</div>
+      <div class="date-rank-track">
+        <div class="date-rank-fill yes" style="width:${(item.yes / maxScore) * 100}%">${item.yes || ""}</div>
+        <div class="date-rank-fill maybe" style="width:${((item.maybe * 0.5) / maxScore) * 100}%">${item.maybe || ""}</div>
+      </div>
+      <strong>${item.score}</strong>
+    </div>`)
+    .join("");
+}
 
-  transportBoard.innerHTML = [
-    boardColumn("Need rides there", state.guests.filter((guest) => guest.transportThere === "need-ride"), transportLine("there")),
-    boardColumn("Seats there", state.guests.filter((guest) => guest.transportThere === "driving"), driverLine("there")),
-    boardColumn("Need rides back", state.guests.filter((guest) => guest.transportBack === "need-ride"), transportLine("back")),
-    boardColumn("Seats back", state.guests.filter((guest) => guest.transportBack === "driving"), driverLine("back"))
-  ].join("");
+function dateSummaries() {
+  return (state.trip.dateOptions || [])
+    .map((date) => {
+      const votes = state.guests.map((guest) => guest.dateAvailability?.[date]).filter(Boolean);
+      const yes = votes.filter((vote) => vote === "yes").length;
+      const maybe = votes.filter((vote) => vote === "maybe").length;
+      return { date, yes, maybe, score: yes + maybe * 0.5 };
+    })
+    .sort((a, b) => b.score - a.score);
+}
 
-  boatBoard.innerHTML = [
-    boardColumn("Needs boat match", state.guests.filter((guest) => guest.boatPartnerStatus === "match-me"), boatLine),
-    boardColumn("Has partner", state.guests.filter((guest) => guest.boatPartnerStatus === "have-partner"), boatLine),
-    boardColumn("Solo / no match", state.guests.filter((guest) => guest.boatPartnerStatus === "solo-only" || guest.okayToMatch === false), boatLine),
-    boardColumn("Gear needs", state.guests.filter((guest) => guest.gearNeed), gearLine)
+function renderTransportBoard() {
+  const drivers = state.guests.filter((guest) => ["yes", "bolt_drive"].includes(guest.canDrive));
+  const passengers = state.guests.filter((guest) => !["yes", "bolt_drive"].includes(guest.canDrive));
+  $("#transportBoard").innerHTML = [
+    boardColumn("Drivers", drivers, (guest) => `${guest.totalSeats || "?"} seats, ${guest.startingFrom || "from TBD"}`),
+    boardColumn("Passengers", passengers, (guest) => `${guest.startingFrom || "from TBD"}${guest.preferredCarBuddy ? `, with ${guest.preferredCarBuddy}` : ""}`),
+    boardColumn("Overnight", state.guests.filter((guest) => guest.stayingOvernight === "yes"), (guest) => `Tent: ${guest.hasTent || "-"}, bag: ${guest.hasSleepingBag || "-"}`),
+    boardColumn("Helpers", state.guests.filter((guest) => guest.canHelpWith?.length), (guest) => guest.canHelpWith.join(", "))
   ].join("");
 }
 
 function boardColumn(title, guests, lineRenderer) {
   const items = guests.length
-    ? guests.map((guest) => `<li><strong>${escapeHtml(guest.name)}</strong><span>${lineRenderer(guest)}</span></li>`).join("")
+    ? guests.map((guest) => `<li><strong>${escapeHtml(guest.name)}</strong><span>${escapeHtml(lineRenderer(guest))}</span></li>`).join("")
     : `<li><span>None yet</span></li>`;
-  return `<section class="board-column"><h4>${title}</h4><ul>${items}</ul></section>`;
-}
-
-function transportLine(direction) {
-  return (guest) => {
-    const time = direction === "there" ? guest.departureTime : guest.returnTime;
-    const rideWith = guest.rideWith ? `, with ${escapeHtml(guest.rideWith)}` : "";
-    return `${escapeHtml(guest.departureArea || "Area not set")}${time ? `, ${escapeHtml(time)}` : ""}${rideWith}`;
-  };
-}
-
-function driverLine(direction) {
-  return (guest) => {
-    const seats = direction === "there" ? guest.seatsThere : guest.seatsBack;
-    const time = direction === "there" ? guest.departureTime : guest.returnTime;
-    return `${Number(seats || 0)} seats${time ? `, ${escapeHtml(time)}` : ""}`;
-  };
-}
-
-function boatLine(guest) {
-  const partner = guest.boatPartnerName ? `, partner: ${escapeHtml(guest.boatPartnerName)}` : "";
-  const preference = guest.boatSharePreference ? `, wants: ${escapeHtml(guest.boatSharePreference)}` : "";
-  return `${labelBoat(guest.boat)}, ${labelExperience(guest.experienceLevel)}${partner}${preference}`;
-}
-
-function gearLine(guest) {
-  return escapeHtml(guest.gearNeed);
+  return `<section class="board-column"><h4>${escapeHtml(title)}</h4><ul>${items}</ul></section>`;
 }
 
 function renderAdminGuests() {
   const container = $("#adminGuests");
   if (!state.guests.length) {
-    container.innerHTML = `<p>No guest details yet.</p>`;
+    container.innerHTML = `<p>No registrations yet.</p>`;
     return;
   }
-
   container.innerHTML = state.guests
-    .map(
-      (guest) => `<article class="admin-card">
-        <div>
-          <h4>${escapeHtml(guest.name)}</h4>
-          <p>${new Date(guest.createdAt).toLocaleString()}</p>
-        </div>
-        <dl>
-          ${detail("Phone", guest.phone)}
-          ${detail("Email", guest.email || "-")}
-          ${detail("Preferred date", labelDate(guest.datePreference))}
-          ${detail("Preferred place", labelPlace(guest.placePreference))}
-          ${detail("Stay overnight", guest.stayOvernight ? "Yes" : "No")}
-          ${detail("Party", String(1 + (guest.plusOne ? 1 : 0)))}
-          ${detail("There", transportDetail(guest, "there"))}
-          ${detail("Back", transportDetail(guest, "back"))}
-          ${detail("Area", guest.departureArea || "-")}
-          ${detail("Ride with", guest.rideWith || "-")}
-          ${detail("Boat", labelBoat(guest.boat))}
-          ${detail("Experience", labelExperience(guest.experienceLevel))}
-          ${detail("Boat partner", boatPartnerDetail(guest))}
-          ${detail("Food", guest.food || "-")}
-          ${detail("Allergies", guest.allergies || "-")}
-          ${detail("Gear has", guest.gearHave || "-")}
-          ${detail("Gear needs", guest.gearNeed || "-")}
-          ${detail("Notes", guest.notes || "-")}
-        </dl>
-        <button class="button danger" data-delete="${guest.id}" type="button">Remove</button>
-      </article>`
-    )
+    .map((guest) => `<article class="admin-card">
+      <div>
+        <h4>${escapeHtml(guest.name)}</h4>
+        <p>${new Date(guest.createdAt).toLocaleString()}</p>
+      </div>
+      <dl>
+        ${detail("Email", guest.email || "-")}
+        ${detail("Phone", guest.phone || "-")}
+        ${detail("+1s", guest.plusOneName || "-")}
+        ${detail("Driver", labelDriver(guest.canDrive))}
+        ${detail("Seats", guest.totalSeats || "-")}
+        ${detail("Start", guest.startingFrom || "-")}
+        ${detail("Kayak partner", guest.kayakPartnerPref || "Assign")}
+        ${detail("Experience", labelExperience(guest.kayakExperience))}
+        ${detail("Overnight", labelStay(guest.stayingOvernight))}
+        ${detail("Tent", guest.hasTent || "-")}
+        ${detail("Food", guest.eatingGroupFood ? guest.dietaryPref : "Own")}
+        ${detail("Allergies", guest.allergies || "-")}
+        ${detail("Drinks", guest.wantsDrinks || "no")}
+        ${detail("Sauna", guest.wantsSauna ? "Yes" : "No")}
+        ${detail("T-shirt", guest.tshirtSize || "-")}
+        ${detail("Help", guest.canHelpWith?.join(", ") || "-")}
+        ${detail("Emergency", guest.emergencyContactName ? `${guest.emergencyContactName} ${guest.emergencyContactPhone || ""}` : "-")}
+        ${detail("Notes", guest.comments || guest.notes || "-")}
+      </dl>
+      <button class="nav-btn danger" data-delete="${guest.id}" type="button">Remove</button>
+    </article>`)
     .join("");
 }
 
 function detail(label, value) {
-  return `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`;
+  return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
 }
 
-function labelDate(value) {
-  if (state.trip.dateOptions.includes(value)) return value;
-  return {
-    "decide-later": "Date later",
-    any: "Any date",
-    "option-1": "Date option 1",
-    "option-2": "Date option 2",
-    "option-3": "Date option 3"
-  }[value] || "Date later";
+function countBy(items, key) {
+  return items.reduce((counts, item) => {
+    const value = item[key] || "unknown";
+    counts[value] = (counts[value] || 0) + 1;
+    return counts;
+  }, {});
 }
 
-function labelPlace(value) {
-  if (state.trip.placeOptions.includes(value)) return value;
-  return {
-    "decide-later": "Place later",
-    any: "Any place"
-  }[value] || "Place later";
+function labelDriver(value) {
+  return { yes: "Driving", bolt_drive: "Bolt Drive", no: "Passenger" }[value] || "Passenger";
 }
 
-function labelBoat(value) {
-  return {
-    "no-preference": "No boat preference",
-    solo: "Solo kayak",
-    tandem: "Tandem kayak",
-    experienced: "Experienced paddler",
-    beginner: "Beginner-friendly"
-  }[value] || value;
+function labelStay(value) {
+  return { yes: "Overnight", maybe: "Maybe overnight", no: "Day trip" }[value] || "Day trip";
 }
 
 function labelExperience(value) {
-  return {
-    beginner: "Beginner",
-    okay: "Okay",
-    confident: "Confident"
-  }[value] || "Okay";
+  return { beginner: "Beginner", intermediate: "Some experience", experienced: "Experienced", okay: "Some experience", confident: "Experienced" }[value] || "Not set";
 }
 
-function labelTransport(value, direction) {
-  return {
-    "need-ride": direction === "there" ? "Needs ride there" : "Needs ride back",
-    driving: direction === "there" ? "Can drive there" : "Can drive back",
-    "passenger-arranged": "Ride arranged",
-    other: "Transport unsure"
-  }[value] || "Transport unsure";
-}
-
-function transportDetail(guest, direction) {
-  const transport = direction === "there" ? guest.transportThere : guest.transportBack;
-  const seats = direction === "there" ? guest.seatsThere : guest.seatsBack;
-  const time = direction === "there" ? guest.departureTime : guest.returnTime;
-  const seatText = transport === "driving" ? `, ${Number(seats || 0)} seats` : "";
-  return `${labelTransport(transport, direction)}${seatText}${time ? `, ${time}` : ""}`;
-}
-
-function boatPartnerDetail(guest) {
-  const labels = {
-    "match-me": "Needs match",
-    "have-partner": "Has partner",
-    "solo-only": "Solo only",
-    "no-preference": "No preference"
-  };
-  const base = labels[guest.boatPartnerStatus] || "Needs match";
-  const partner = guest.boatPartnerName ? `: ${guest.boatPartnerName}` : "";
-  return `${base}${partner}`;
-}
-
-function renderAll() {
-  updateTripView();
-  renderChoiceSelects();
-  renderGuestList();
-  if (!$("#adminPanel").classList.contains("hidden")) {
-    fillSettingsForm();
-    renderCosts();
-    renderBoards();
-    renderAdminGuests();
-  }
+function splitLines(value) {
+  return String(value || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (char) => {
-    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char];
-  });
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 }
 
-function formData(form) {
-  return Object.fromEntries(new FormData(form).entries());
-}
+$("#startButton").addEventListener("click", () => goToStep(1));
+$("#nextBtn").addEventListener("click", nextStep);
+$("#prevBtn").addEventListener("click", prevStep);
+$("#anotherResponseButton").addEventListener("click", resetFormFlow);
+$("#addPlusOneButton").addEventListener("click", addPlusOne);
 
-$("#guestForm").addEventListener("submit", async (event) => {
+document.addEventListener("click", (event) => {
+  const option = event.target.closest(".option-card");
+  if (option) selectOption(option);
+  const dateButton = event.target.closest(".date-btn");
+  if (dateButton) setDateAvailability(dateButton);
+  const chip = event.target.closest(".chip[data-help]");
+  if (chip) toggleHelp(chip);
+  const remove = event.target.closest("[data-remove-plus-one]");
+  if (remove) $(`#${remove.dataset.removePlusOne}`)?.remove();
+  const review = event.target.closest("[data-review-step]");
+  if (review) goToStep(Number(review.dataset.reviewStep));
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey || event.target.matches("textarea")) return;
+  if (currentStep === 0) return;
   event.preventDefault();
-  const form = event.currentTarget;
-  const data = formData(form);
-  data.plusOne = form.elements.plusOne.checked;
-  data.okayToMatch = form.elements.okayToMatch.value;
-  try {
-    state = await api("/api/guests", {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
-    form.reset();
-    form.elements.seatsThere.value = 0;
-    form.elements.seatsBack.value = 0;
-    renderChoiceSelects();
-    $("#guestStatus").textContent = "Saved. See you on the water.";
-    renderAll();
-  } catch (error) {
-    $("#guestStatus").textContent = error.message;
-  }
+  nextStep();
+});
+
+$("#f_starting_from").addEventListener("change", (event) => {
+  toggle("customStartSection", event.target.value === "other");
 });
 
 $("#adminLogin").addEventListener("submit", async (event) => {
@@ -386,16 +577,18 @@ $("#adminLogin").addEventListener("submit", async (event) => {
     adminPin = pin;
     state = await api("/api/admin/state");
     $("#adminPanel").classList.remove("hidden");
-    renderAll();
+    fillSettingsForm();
+    renderAdmin();
   } catch {
     event.currentTarget.elements.pin.value = "";
-    event.currentTarget.elements.pin.placeholder = "Wrong pin";
+    event.currentTarget.elements.pin.placeholder = "Wrong key";
   }
 });
 
 $("#settingsForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const data = formData(event.currentTarget);
+  const form = event.currentTarget;
+  const data = Object.fromEntries(new FormData(form).entries());
   try {
     state = await api("/api/admin/settings", {
       method: "PUT",
@@ -406,38 +599,32 @@ $("#settingsForm").addEventListener("submit", async (event) => {
           location: data.location,
           meetingPoint: data.meetingPoint,
           dateOptions: splitLines(data.dateOptions),
-          placeOptions: splitLines(data.placeOptions),
           intro: data.intro
         },
         costs: {
           fixedCosts: Number(data.fixedCosts),
           perPersonCost: Number(data.perPersonCost),
           perCarCost: Number(data.perCarCost),
-          depositPerPerson: Number(data.depositPerPerson),
           currency: data.currency
         }
       })
     });
     $("#settingsStatus").textContent = "Settings saved.";
-    renderAll();
+    renderTripView();
+    renderAdmin();
   } catch (error) {
     $("#settingsStatus").textContent = error.message;
   }
 });
 
-function splitLines(value) {
-  return String(value || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
 $("#adminGuests").addEventListener("click", async (event) => {
   const button = event.target.closest("[data-delete]");
   if (!button) return;
   state = await api(`/api/admin/guests/${button.dataset.delete}`, { method: "DELETE" });
-  renderAll();
+  renderTripView();
+  renderAdmin();
 });
 
 state = await api("/api/state");
-renderAll();
+renderTripView();
+goToStep(0);

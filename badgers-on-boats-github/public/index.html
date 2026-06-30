@@ -3,249 +3,312 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Badgers on Boats</title>
+    <title>Bolt Kayak Trip 2026</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header class="hero">
-      <nav class="topbar" aria-label="Main navigation">
-        <a class="brand" href="#signup">Badgers on Boats</a>
-        <div class="nav-actions">
-          <a href="#signup">Sign up</a>
+    <div class="form-container" id="app">
+      <header class="form-header">
+        <a class="logo" href="#signup"><span>Bolt</span> Kayak Trip <strong>2026</strong></a>
+        <nav class="header-links" aria-label="Main navigation">
+          <a href="#guests">Guests</a>
           <a href="#admin">Admin</a>
-        </div>
-      </nav>
-      <div class="hero-content">
-        <p class="kicker" id="tripDate">Date options coming soon</p>
-        <h1 id="tripTitle">Kayak weekend</h1>
-        <p id="tripIntro">Add your details so we can plan boats, food, rides, and costs.</p>
-        <div class="hero-actions">
-          <a class="button primary" href="#signup">Add my info</a>
-          <a class="button ghost" href="#guests">See who's coming</a>
-        </div>
+        </nav>
+        <div class="step-counter" id="stepCounter"></div>
+      </header>
+
+      <div class="progress-bar" aria-hidden="true">
+        <div class="progress-fill" id="progressFill"></div>
       </div>
-    </header>
 
-    <main>
-      <section class="details-band" aria-label="Trip details">
-        <div class="metric">
-          <span>Destination</span>
-          <strong id="tripLocation">To be decided</strong>
-        </div>
-        <div class="metric">
-          <span>Meeting point</span>
-          <strong id="tripMeeting">To be decided</strong>
-        </div>
-        <div class="metric">
-          <span>People</span>
-          <strong id="peopleCount">0</strong>
-        </div>
-        <div class="metric">
-          <span>Estimated share</span>
-          <strong id="publicCost">0 EUR</strong>
-        </div>
-      </section>
+      <main class="steps-viewport" id="signup">
+        <form id="guestForm" novalidate>
+          <section class="step active" data-step="0">
+            <div class="step-content welcome-content">
+              <div class="kayak-scene" aria-hidden="true">
+                <svg class="kayak-svg" viewBox="0 0 200 100" width="240" height="120">
+                  <g class="kayak-bob">
+                    <line x1="78" y1="28" x2="62" y2="52" class="paddle-line" />
+                    <ellipse cx="60" cy="54" rx="5" ry="2.5" class="paddle-blade" transform="rotate(-25 60 54)" />
+                    <line x1="105" y1="28" x2="121" y2="52" class="paddle-line" />
+                    <ellipse cx="123" cy="54" rx="5" ry="2.5" class="paddle-blade" transform="rotate(25 123 54)" />
+                    <circle cx="92" cy="24" r="7" class="person-head" />
+                    <rect x="87" y="31" width="10" height="14" rx="3" class="person-body" />
+                    <path d="M50,58 Q55,52 70,50 L130,50 Q145,52 150,58 Q145,62 130,63 L70,63 Q55,62 50,58Z" class="kayak-hull" />
+                  </g>
+                  <path class="wave wave-1" d="M0,72 Q15,66 30,72 T60,72 T90,72 T120,72 T150,72 T180,72 T210,72" />
+                  <path class="wave wave-2" d="M-10,78 Q10,72 25,78 T55,78 T85,78 T115,78 T145,78 T175,78 T205,78" />
+                  <path class="wave wave-3" d="M5,84 Q20,79 35,84 T65,84 T95,84 T125,84 T155,84 T185,84" />
+                </svg>
+              </div>
+              <h1>Bolt <span>Kayak Trip</span><br />2026</h1>
+              <p>Time for our yearly kayaking adventure. Fill out this form to register. It takes about 3 minutes.</p>
+              <button class="start-btn" type="button" id="startButton">Let's go</button>
+            </div>
+          </section>
 
-      <section class="section-grid" id="signup">
-        <div>
-          <p class="eyebrow">Join the trip</p>
-          <h2>Add your information</h2>
-          <p class="section-copy">
-            This keeps the group list tidy for ride planning, boat choices, food shopping, and final cost splitting.
-          </p>
-        </div>
-        <form class="panel" id="guestForm">
-          <div class="field two">
-            <label>Name <input name="name" autocomplete="name" required /></label>
-            <label>Phone <input name="phone" autocomplete="tel" required /></label>
-          </div>
-          <label>Email <input name="email" type="email" autocomplete="email" /></label>
-          <div class="field two">
-            <label>Preferred date
-              <select name="datePreference" id="datePreference"></select>
-            </label>
-            <label>Preferred place
-              <select name="placePreference" id="placePreference"></select>
-            </label>
-          </div>
-          <label>Stay overnight?
-            <select name="stayOvernight">
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
-          </label>
-          <h3>Transport</h3>
-          <div class="field two">
-            <label>Getting there
-              <select name="transportThere">
-                <option value="need-ride">I need a ride</option>
-                <option value="driving">I can drive</option>
-                <option value="passenger-arranged">I already have a ride</option>
-                <option value="other">Other / not sure</option>
-              </select>
-            </label>
-            <label>Free seats there
-              <input name="seatsThere" type="number" min="0" value="0" />
-            </label>
-          </div>
-          <div class="field two">
-            <label>Coming back
-              <select name="transportBack">
-                <option value="need-ride">I need a ride</option>
-                <option value="driving">I can drive</option>
-                <option value="passenger-arranged">I already have a ride</option>
-                <option value="other">Other / not sure</option>
-              </select>
-            </label>
-            <label>Free seats back
-              <input name="seatsBack" type="number" min="0" value="0" />
-            </label>
-          </div>
-          <div class="field two">
-            <label>Departure area <input name="departureArea" placeholder="Area, city, neighborhood" /></label>
-            <label>Departure time <input name="departureTime" placeholder="Morning, 18:00, flexible..." /></label>
-          </div>
-          <div class="field two">
-            <label>Return time <input name="returnTime" placeholder="Same day, Sunday morning..." /></label>
-            <label>Already riding with <input name="rideWith" placeholder="Name(s), if already arranged" /></label>
-          </div>
-          <div class="toggle-row">
-            <input id="plusOne" name="plusOne" type="checkbox" />
-            <label for="plusOne">I am bringing a plus one</label>
-          </div>
-          <label>Plus one name <input name="plusOneName" /></label>
-          <h3>Boat matching</h3>
-          <div class="field two">
-            <label>Experience level
-              <select name="experienceLevel">
-                <option value="beginner">Beginner</option>
-                <option value="okay" selected>Okay / casual</option>
-                <option value="confident">Confident paddler</option>
-              </select>
-            </label>
-            <label>Boat partner
-              <select name="boatPartnerStatus">
-                <option value="match-me">Please match me</option>
-                <option value="have-partner">I already have a partner</option>
-                <option value="solo-only">I prefer solo only</option>
-                <option value="no-preference">No preference</option>
-              </select>
-            </label>
-          </div>
-          <div class="field two">
-            <label>Partner name <input name="boatPartnerName" placeholder="If already decided" /></label>
-            <label>Prefer to share with <input name="boatSharePreference" placeholder="Optional name / preference" /></label>
-          </div>
-          <label>Can organisers match you?
-            <select name="okayToMatch">
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
-          </label>
-          <div class="field two">
-            <label>Food preferences
-              <textarea name="food" rows="4" placeholder="Vegetarian, allergies, favorite snacks..."></textarea>
-            </label>
-            <label>Allergies
-              <textarea name="allergies" rows="4" placeholder="Important allergies or medical food notes"></textarea>
-            </label>
-          </div>
-          <div class="field two">
-            <label>Boat preference
-              <select name="boat">
-                <option value="no-preference">No preference</option>
-                <option value="solo">Solo kayak</option>
-                <option value="tandem">Tandem kayak</option>
-                <option value="experienced">Experienced paddler</option>
-                <option value="beginner">Beginner-friendly boat</option>
-              </select>
-            </label>
-            <label>Gear you can bring
-              <textarea name="gearHave" rows="4" placeholder="Dry bag, tent, stove, first aid..."></textarea>
-            </label>
-          </div>
-          <label>Gear you need <textarea name="gearNeed" rows="3" placeholder="Tent spot, dry bag, life jacket..."></textarea></label>
-          <label>Notes <textarea name="notes" rows="3" placeholder="Arrival time, gear, questions..."></textarea></label>
-          <button class="button primary" type="submit">Save my spot</button>
-          <p class="form-status" id="guestStatus" role="status"></p>
+          <section class="step" data-step="1">
+            <div class="step-content">
+              <div class="step-number">1</div>
+              <h2>Let's start with you</h2>
+              <p class="step-subtitle">Basic info so we know who's coming</p>
+              <label class="field-group">Full name * <input id="f_name" name="name" autocomplete="name" required placeholder="e.g. Haris Malhi" /></label>
+              <label class="field-group">Bolt email * <input id="f_email" name="email" type="email" autocomplete="email" required placeholder="name@bolt.eu" /></label>
+              <label class="field-group">Phone number * <small>For the trip WhatsApp/Telegram group</small><input id="f_phone" name="phone" autocomplete="tel" required placeholder="+372 5555 1234" /></label>
+            </div>
+          </section>
+
+          <section class="step" data-step="2">
+            <div class="step-content">
+              <div class="step-number">2</div>
+              <h2>Bringing anyone?</h2>
+              <p class="step-subtitle">+1s from outside Bolt are welcome. Only requirement: badger spirit and English skills.</p>
+              <div class="options-grid cols-2">
+                <button class="option-card" data-field="has_plus_ones" data-value="yes" type="button"><span class="option-icon">👥</span><span class="option-label">Yes</span></button>
+                <button class="option-card selected" data-field="has_plus_ones" data-value="no" type="button"><span class="option-icon">👋</span><span class="option-label">Just me</span></button>
+              </div>
+              <div class="conditional" id="plusOneSection">
+                <div id="plusOneList"></div>
+                <button class="add-btn" id="addPlusOneButton" type="button">+ Add a +1</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="step" data-step="3">
+            <div class="step-content">
+              <div class="step-number">3</div>
+              <h2>When are you free?</h2>
+              <p class="step-subtitle">Mark your availability for each weekend. This helps us pick the best date.</p>
+              <div class="date-grid" id="dateGrid"></div>
+            </div>
+          </section>
+
+          <section class="step" data-step="4">
+            <div class="step-content">
+              <div class="step-number">4</div>
+              <h2>Getting there</h2>
+              <p class="step-subtitle">Passengers chip in for fuel. Drivers do the hero work.</p>
+              <label class="field-group">Can you drive?</label>
+              <div class="options-grid cols-3">
+                <button class="option-card" data-field="can_drive" data-value="yes" type="button"><span class="option-icon">🚗</span><span class="option-label">Yes, my car</span></button>
+                <button class="option-card" data-field="can_drive" data-value="bolt_drive" type="button"><span class="option-icon">⚡</span><span class="option-label">Bolt Drive</span></button>
+                <button class="option-card selected" data-field="can_drive" data-value="no" type="button"><span class="option-icon">🪑</span><span class="option-label">Passenger</span></button>
+              </div>
+              <div class="conditional" id="driverSection">
+                <label class="field-group">Total seats including you <small>If 5-seater with small trunk, mark 4</small><input id="f_total_seats" type="number" min="2" max="8" placeholder="4" /></label>
+              </div>
+              <label class="field-group">Where are you starting from?
+                <select id="f_starting_from">
+                  <option value="">Select...</option>
+                  <option value="Bolt HQ">Bolt HQ</option>
+                  <option value="Tartu">Tartu</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <div class="conditional" id="customStartSection">
+                <label class="field-group">Pickup address <input id="f_starting_from_custom" placeholder="Your pickup address" /></label>
+              </div>
+              <label class="field-group">Prefer to ride with someone? <small>Optional</small><input id="f_preferred_car_buddy" list="participantList" placeholder="Name(s) or leave blank" /></label>
+            </div>
+          </section>
+
+          <section class="step" data-step="5">
+            <div class="step-content">
+              <div class="step-number">5</div>
+              <h2>Kayak time</h2>
+              <p class="step-subtitle">You'll share a 2-person kayak. If you don't pick a partner, we'll match you.</p>
+              <label class="field-group">Preferred kayak partner <small>Must be mutual. Leave blank for random.</small><input id="f_kayak_partner" list="participantList" placeholder="Name or leave blank" /></label>
+              <label class="field-group">Kayaking experience</label>
+              <div class="options-grid cols-3">
+                <button class="option-card" data-field="kayak_experience" data-value="beginner" type="button"><span class="option-icon">🐘</span><span class="option-label">Beginner</span><span class="option-desc">First time or rarely</span></button>
+                <button class="option-card selected" data-field="kayak_experience" data-value="intermediate" type="button"><span class="option-icon">🌊</span><span class="option-label">Some experience</span><span class="option-desc">Done it a few times</span></button>
+                <button class="option-card" data-field="kayak_experience" data-value="experienced" type="button"><span class="option-icon">🏆</span><span class="option-label">Experienced</span><span class="option-desc">Regular paddler</span></button>
+              </div>
+            </div>
+          </section>
+
+          <section class="step" data-step="6">
+            <div class="step-content">
+              <div class="step-number">6</div>
+              <h2>Staying the night?</h2>
+              <p class="step-subtitle">Twice as fun if you stay. Big campfire, late-night vibes, stargazing.</p>
+              <div class="options-grid cols-3">
+                <button class="option-card" data-field="staying_overnight" data-value="yes" type="button"><span class="option-icon">⛺</span><span class="option-label">Yes</span><span class="option-desc">Full experience</span></button>
+                <button class="option-card" data-field="staying_overnight" data-value="maybe" type="button"><span class="option-icon">🤔</span><span class="option-label">Maybe</span><span class="option-desc">Deciding later</span></button>
+                <button class="option-card selected" data-field="staying_overnight" data-value="no" type="button"><span class="option-icon">🛶</span><span class="option-label">Day trip only</span></button>
+              </div>
+              <div class="conditional" id="overnightSection">
+                <label class="field-group">Do you have a tent?</label>
+                <div class="options-grid cols-3">
+                  <button class="option-card" data-field="has_tent" data-value="yes" type="button"><span class="option-label">Yes, bringing mine</span></button>
+                  <button class="option-card" data-field="has_tent" data-value="share" type="button"><span class="option-label">Can share</span></button>
+                  <button class="option-card" data-field="has_tent" data-value="no" type="button"><span class="option-label">No, need one</span></button>
+                </div>
+                <label class="field-group">Sleeping bag and mat?</label>
+                <div class="options-grid cols-2">
+                  <button class="option-card" data-field="has_sleeping_bag" data-value="yes" type="button"><span class="option-label">Yes, have them</span></button>
+                  <button class="option-card" data-field="has_sleeping_bag" data-value="no" type="button"><span class="option-label">No, need them</span></button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="step" data-step="7">
+            <div class="step-content">
+              <div class="step-number">7</div>
+              <h2>Food and drinks</h2>
+              <p class="step-subtitle">We do group food. Everyone chips in based on what they consume.</p>
+              <label class="field-group">Eating the group food?</label>
+              <div class="options-grid cols-2">
+                <button class="option-card selected" data-field="eating_group_food" data-value="yes" type="button"><span class="option-icon">🍖</span><span class="option-label">Yes please</span></button>
+                <button class="option-card" data-field="eating_group_food" data-value="no" type="button"><span class="option-icon">🥪</span><span class="option-label">Bringing my own</span></button>
+              </div>
+              <div class="conditional show" id="foodSection">
+                <label class="field-group">Dietary preference</label>
+                <div class="options-grid cols-3">
+                  <button class="option-card selected" data-field="dietary_pref" data-value="meat" type="button"><span class="option-icon">🥩</span><span class="option-label">Meat</span></button>
+                  <button class="option-card" data-field="dietary_pref" data-value="vegetarian" type="button"><span class="option-icon">🥬</span><span class="option-label">Vegetarian</span></button>
+                  <button class="option-card" data-field="dietary_pref" data-value="vegan" type="button"><span class="option-icon">🌿</span><span class="option-label">Vegan</span></button>
+                </div>
+                <label class="field-group">Any allergies? <small>Leave blank if none</small><input id="f_allergies" placeholder="e.g. nuts, shellfish, gluten" /></label>
+              </div>
+              <label class="field-group">Drinks?</label>
+              <div class="options-grid cols-3">
+                <button class="option-card" data-field="wants_drinks" data-value="yes" type="button"><span class="option-icon">🍺</span><span class="option-label">Yes</span><span class="option-desc">Shared cost</span></button>
+                <button class="option-card" data-field="wants_drinks" data-value="soft" type="button"><span class="option-icon">🥤</span><span class="option-label">Soft only</span></button>
+                <button class="option-card selected" data-field="wants_drinks" data-value="no" type="button"><span class="option-icon">💧</span><span class="option-label">No thanks</span></button>
+              </div>
+              <label class="field-group">Sauna?</label>
+              <div class="options-grid cols-2">
+                <button class="option-card" data-field="wants_sauna" data-value="yes" type="button"><span class="option-icon">🧖</span><span class="option-label">Yes</span></button>
+                <button class="option-card selected" data-field="wants_sauna" data-value="no" type="button"><span class="option-icon">👋</span><span class="option-label">No thanks</span></button>
+              </div>
+            </div>
+          </section>
+
+          <section class="step" data-step="8">
+            <div class="step-content">
+              <div class="step-number">8</div>
+              <h2>Almost there</h2>
+              <p class="step-subtitle">A few optional things to help us organize.</p>
+              <label class="field-group">Can you help with anything? <small>Pick as many as you want</small></label>
+              <div class="chips" id="helpChips">
+                <button class="chip" data-help="shopping" type="button">🛒 Food shopping</button>
+                <button class="chip" data-help="grilling" type="button">🍖 Grilling</button>
+                <button class="chip" data-help="setup" type="button">⛺ Camp setup</button>
+                <button class="chip" data-help="dj" type="button">🎵 DJ / Music</button>
+                <button class="chip" data-help="photo" type="button">📷 Photography</button>
+              </div>
+              <label class="field-group">T-shirt size <small>In case we do trip merch</small></label>
+              <div class="options-grid cols-3 sizes-grid">
+                <button class="option-card" data-field="tshirt_size" data-value="XS" type="button"><span class="option-label">XS</span></button>
+                <button class="option-card" data-field="tshirt_size" data-value="S" type="button"><span class="option-label">S</span></button>
+                <button class="option-card" data-field="tshirt_size" data-value="M" type="button"><span class="option-label">M</span></button>
+                <button class="option-card" data-field="tshirt_size" data-value="L" type="button"><span class="option-label">L</span></button>
+                <button class="option-card" data-field="tshirt_size" data-value="XL" type="button"><span class="option-label">XL</span></button>
+                <button class="option-card" data-field="tshirt_size" data-value="XXL" type="button"><span class="option-label">XXL</span></button>
+              </div>
+              <label class="field-group">Emergency contact <small>Recommended for a river activity</small><input id="f_emergency_name" placeholder="Contact name" /></label>
+              <label class="field-group">Emergency phone <input id="f_emergency_phone" type="tel" placeholder="Contact phone" /></label>
+              <label class="field-group">Anything else? <small>Special requests, equipment needs, etc.</small><textarea id="f_comments" placeholder="e.g. I need a tent and sleeping bag"></textarea></label>
+            </div>
+          </section>
+
+          <section class="step" data-step="9">
+            <div class="step-content">
+              <div class="step-number">✓</div>
+              <h2>Review and submit</h2>
+              <p class="step-subtitle">Double-check your info before submitting.</p>
+              <div id="reviewContent" class="review-stack"></div>
+            </div>
+          </section>
         </form>
-      </section>
+      </main>
 
-      <section class="section-grid" id="guests">
+      <footer class="form-nav" id="formNav">
+        <button class="nav-btn secondary" id="prevBtn" type="button">← Back</button>
+        <span class="nav-hint">Press Enter ↵</span>
+        <button class="nav-btn primary" id="nextBtn" type="button">Continue →</button>
+        <p class="form-status" id="guestStatus" role="status"></p>
+      </footer>
+    </div>
+
+    <section class="success-panel hidden" id="successPanel">
+      <div class="success-content">
+        <div class="success-icon">✓</div>
+        <h2>You're registered</h2>
+        <p>Your trip info has been saved. You can submit again with the same email later to update your answers.</p>
+        <button class="start-btn" id="anotherResponseButton" type="button">Add another response</button>
+      </div>
+    </section>
+
+    <datalist id="participantList"></datalist>
+
+    <section class="public-section" id="guests">
+      <div class="section-head">
         <div>
           <p class="eyebrow">Group view</p>
           <h2>Who's coming</h2>
-          <p class="section-copy">A quick public overview. Phone numbers and emails stay visible only in admin.</p>
         </div>
-        <div class="guest-list" id="guestList"></div>
-      </section>
+        <a class="text-link" href="#signup">Back to signup</a>
+      </div>
+      <div class="guest-list" id="guestList"></div>
+    </section>
 
-      <section class="admin-section" id="admin">
-        <div class="admin-head">
-          <div>
-            <p class="eyebrow">Admin</p>
-            <h2>Trip control panel</h2>
+    <section class="admin-container" id="admin">
+      <div class="admin-header">
+        <div>
+          <h2>Kayak Trip Admin</h2>
+          <p id="adminCount">0 registered</p>
+        </div>
+        <form class="login" id="adminLogin">
+          <input name="pin" type="password" placeholder="Admin key" required />
+          <button class="nav-btn primary" type="submit">Unlock</button>
+        </form>
+      </div>
+
+      <div class="admin-grid hidden" id="adminPanel">
+        <form class="card" id="settingsForm">
+          <h3>Trip settings</h3>
+          <label class="field-group">Title <input name="title" /></label>
+          <label class="field-group">Date note <input name="date" /></label>
+          <label class="field-group">Destination <input name="location" /></label>
+          <label class="field-group">Meeting point <input name="meetingPoint" /></label>
+          <label class="field-group">Weekend date options <textarea name="dateOptions" rows="5"></textarea></label>
+          <label class="field-group">Intro <textarea name="intro" rows="3"></textarea></label>
+          <div class="form-row">
+            <label class="field-group">Fixed costs <input name="fixedCosts" type="number" min="0" step="1" /></label>
+            <label class="field-group">Cost per person <input name="perPersonCost" type="number" min="0" step="1" /></label>
           </div>
-          <form class="login" id="adminLogin">
-            <input name="pin" type="password" placeholder="Admin pin" required />
-            <button class="button secondary" type="submit">Unlock</button>
-          </form>
+          <div class="form-row">
+            <label class="field-group">Cost per car <input name="perCarCost" type="number" min="0" step="1" /></label>
+            <label class="field-group">Currency <input name="currency" maxlength="8" /></label>
+          </div>
+          <button class="nav-btn primary" type="submit">Save settings</button>
+          <p class="form-status" id="settingsStatus" role="status"></p>
+        </form>
+
+        <div class="card">
+          <h3>Overview</h3>
+          <div class="stat-grid" id="costGrid"></div>
         </div>
 
-        <div class="admin-grid hidden" id="adminPanel">
-          <form class="panel" id="settingsForm">
-            <h3>Trip settings</h3>
-            <label>Title <input name="title" /></label>
-            <div class="field two">
-              <label>Date note <input name="date" placeholder="Date options coming soon" /></label>
-              <label>Destination <input name="location" placeholder="Leave blank until decided" /></label>
-            </div>
-            <label>Meeting point <input name="meetingPoint" placeholder="Leave blank until decided" /></label>
-            <div class="field two">
-              <label>Date options
-                <textarea name="dateOptions" rows="4" placeholder="One option per line"></textarea>
-              </label>
-              <label>Place options
-                <textarea name="placeOptions" rows="4" placeholder="One option per line"></textarea>
-              </label>
-            </div>
-            <label>Intro <textarea name="intro" rows="3"></textarea></label>
-            <h3>Cost model</h3>
-            <div class="field two">
-              <label>Fixed costs <input name="fixedCosts" type="number" min="0" step="1" /></label>
-              <label>Cost per person <input name="perPersonCost" type="number" min="0" step="1" /></label>
-            </div>
-            <div class="field two">
-              <label>Cost per car <input name="perCarCost" type="number" min="0" step="1" /></label>
-              <label>Deposit per person <input name="depositPerPerson" type="number" min="0" step="1" /></label>
-            </div>
-            <label>Currency <input name="currency" maxlength="8" /></label>
-            <button class="button primary" type="submit">Save settings</button>
-            <p class="form-status" id="settingsStatus" role="status"></p>
-          </form>
-
-          <div class="panel">
-            <h3>Cost estimate</h3>
-            <div class="cost-grid" id="costGrid"></div>
-          </div>
-
-          <div class="panel wide">
-            <h3>Transport board</h3>
-            <div class="admin-board" id="transportBoard"></div>
-          </div>
-
-          <div class="panel wide">
-            <h3>Boat matching board</h3>
-            <div class="admin-board" id="boatBoard"></div>
-          </div>
-
-          <div class="panel wide">
-            <h3>Guest details</h3>
-            <div class="admin-guests" id="adminGuests"></div>
-          </div>
+        <div class="card wide">
+          <h3>Date ranking</h3>
+          <div id="dateSummary" class="date-summary"></div>
         </div>
-      </section>
-    </main>
+
+        <div class="card wide">
+          <h3>Transport</h3>
+          <div class="admin-board" id="transportBoard"></div>
+        </div>
+
+        <div class="card wide">
+          <h3>All registrations</h3>
+          <div class="admin-guests" id="adminGuests"></div>
+        </div>
+      </div>
+    </section>
 
     <script src="/app.js" type="module"></script>
   </body>

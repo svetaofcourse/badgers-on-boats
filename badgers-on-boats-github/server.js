@@ -12,17 +12,32 @@ const stateFile = join(dataDir, "state.json");
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 
+const defaultWeekendDates = [
+  "June 20-21",
+  "June 27-28",
+  "July 4-5",
+  "July 11-12",
+  "July 18-19",
+  "July 25-26",
+  "Aug 1-2",
+  "Aug 8-9",
+  "Aug 15-16",
+  "Aug 22-23",
+  "Aug 29-30",
+  "Sep 5-6"
+];
+
 const defaultState = {
   trip: {
-    title: "Badgers on Boats",
-    date: "Date options coming soon",
-    location: "",
-    meetingPoint: "",
-    dateOptions: [],
+    title: "Bolt Kayak Trip",
+    date: "2026 weekend vote",
+    location: "To be decided",
+    meetingPoint: "Bolt HQ or pickup points",
+    dateOptions: defaultWeekendDates,
     placeOptions: [],
-    adminPin: process.env.ADMIN_PIN || "change-this-pin",
+    adminPin: process.env.ADMIN_PIN || "kayak2026",
     intro:
-      "Add your details so we can coordinate boats, food, rides, and the final shared cost."
+      "Time for our yearly kayaking adventure. Register your availability, rides, kayak plans, food, gear, and extras."
   },
   costs: {
     fixedCosts: 260,
@@ -85,13 +100,20 @@ function cleanOptions(value) {
 }
 
 function normalizeState(state) {
+  const oldDefaultTitle = !state.trip?.title || state.trip.title === "Badgers on Boats";
   const normalized = {
     ...defaultState,
     ...state,
     trip: {
       ...defaultState.trip,
       ...state.trip,
-      dateOptions: cleanOptions(state.trip?.dateOptions),
+      title: oldDefaultTitle ? defaultState.trip.title : state.trip.title,
+      date: state.trip?.date === "Date options coming soon" ? defaultState.trip.date : state.trip?.date || defaultState.trip.date,
+      location: state.trip?.location || defaultState.trip.location,
+      meetingPoint: state.trip?.meetingPoint || defaultState.trip.meetingPoint,
+      intro: oldDefaultTitle ? defaultState.trip.intro : state.trip?.intro || defaultState.trip.intro,
+      adminPin: state.trip?.adminPin === "change-this-pin" ? defaultState.trip.adminPin : state.trip?.adminPin || defaultState.trip.adminPin,
+      dateOptions: cleanOptions(state.trip?.dateOptions).length ? cleanOptions(state.trip?.dateOptions) : defaultState.trip.dateOptions,
       placeOptions: cleanOptions(state.trip?.placeOptions)
     },
     costs: { ...defaultState.costs, ...state.costs },
@@ -106,9 +128,42 @@ function boolValue(value) {
 }
 
 function normalizeGuest(guest) {
+  const plusOnes = Array.isArray(guest.plusOnes)
+    ? guest.plusOnes
+    : String(guest.plusOneName || "")
+        .split(",")
+        .map((name) => ({ name: name.trim(), phone: "" }))
+        .filter((item) => item.name);
+  const canDrive = guest.canDrive || (guest.transportThere === "driving" ? "yes" : "no");
+  const stay = guest.stayingOvernight || (guest.stayOvernight ? "yes" : "no");
+  const dateAvailability = guest.dateAvailability && typeof guest.dateAvailability === "object" ? guest.dateAvailability : {};
   return {
+    name: "",
+    email: "",
+    phone: "",
     placePreference: "decide-later",
-    stayOvernight: false,
+    dateAvailability,
+    plusOnes,
+    plusOne: plusOnes.length > 0 || Boolean(guest.plusOne),
+    plusOneName: plusOnes.map((item) => item.name).join(", ") || guest.plusOneName || "",
+    canDrive,
+    totalSeats: Number(guest.totalSeats || guest.carSeats || guest.seatsThere || 0),
+    startingFrom: guest.startingFrom || guest.departureArea || "",
+    preferredCarBuddy: guest.preferredCarBuddy || guest.rideWith || "",
+    kayakPartnerPref: guest.kayakPartnerPref || guest.boatPartnerName || guest.boatSharePreference || "",
+    kayakExperience: guest.kayakExperience || guest.experienceLevel || "beginner",
+    stayingOvernight: stay,
+    stayOvernight: stay === "yes",
+    hasTent: guest.hasTent || "",
+    hasSleepingBag: guest.hasSleepingBag || "",
+    eatingGroupFood: guest.eatingGroupFood ?? Boolean(guest.food || guest.allergies),
+    dietaryPref: guest.dietaryPref || "meat",
+    wantsDrinks: guest.wantsDrinks || "no",
+    wantsSauna: Boolean(guest.wantsSauna),
+    tshirtSize: guest.tshirtSize || "",
+    canHelpWith: Array.isArray(guest.canHelpWith) ? guest.canHelpWith : [],
+    emergencyContactName: guest.emergencyContactName || "",
+    emergencyContactPhone: guest.emergencyContactPhone || "",
     transportThere: guest.comingByCar ? "driving" : "need-ride",
     transportBack: guest.comingByCar ? "driving" : "need-ride",
     seatsThere: guest.comingByCar ? Number(guest.carSeats || 0) : 0,
@@ -150,7 +205,7 @@ function cleanGuest(input) {
     comingByCar: transportThere === "driving" || transportBack === "driving" || input.comingByCar === "yes",
     carSeats: Math.max(0, Math.max(Number(input.seatsThere || 0), Number(input.seatsBack || 0), Number(input.carSeats || 0))),
     plusOne: boolValue(input.plusOne),
-    plusOneName: String(input.plusOneName || "").trim().slice(0, 80),
+    plusOneName: String(input.plusOneName || "").trim().slice(0, 160),
     food: String(input.food || "").trim().slice(0, 500),
     allergies: String(input.allergies || "").trim().slice(0, 500),
     boat: String(input.boat || "no-preference").slice(0, 40),
@@ -161,8 +216,69 @@ function cleanGuest(input) {
     okayToMatch: !["no", "false", false].includes(input.okayToMatch),
     gearHave: String(input.gearHave || "").trim().slice(0, 500),
     gearNeed: String(input.gearNeed || "").trim().slice(0, 500),
-    notes: String(input.notes || "").trim().slice(0, 500)
+    notes: String(input.notes || "").trim().slice(0, 500),
+    ...cleanReferenceGuest(input, transportThere, transportBack)
   };
+}
+
+function cleanReferenceGuest(input, transportThere, transportBack) {
+  const plusOnes = Array.isArray(input.plus_ones || input.plusOnes)
+    ? (input.plus_ones || input.plusOnes)
+        .map((item) => ({
+          name: String(item.name || "").trim().slice(0, 80),
+          phone: String(item.phone || "").trim().slice(0, 40)
+        }))
+        .filter((item) => item.name)
+        .slice(0, 8)
+    : [];
+  const canDrive = String(input.can_drive || input.canDrive || "no").slice(0, 40);
+  const totalSeats = Math.max(0, Number(input.total_seats || input.totalSeats || 0));
+  const startingFrom = String(input.starting_from || input.startingFrom || input.departureArea || "").trim().slice(0, 160);
+  const stayingOvernight = String(input.staying_overnight || input.stayingOvernight || (boolValue(input.stayOvernight) ? "yes" : "no")).slice(0, 40);
+  const dateAvailability = input.date_availability || input.dateAvailability || {};
+  return {
+    dateAvailability: cleanAvailability(dateAvailability),
+    plusOnes,
+    plusOne: plusOnes.length > 0 || boolValue(input.plusOne),
+    plusOneName: plusOnes.map((item) => item.name).join(", ") || String(input.plusOneName || "").trim().slice(0, 160),
+    canDrive,
+    totalSeats,
+    startingFrom,
+    preferredCarBuddy: String(input.preferred_car_buddy || input.preferredCarBuddy || "").trim().slice(0, 160),
+    kayakPartnerPref: String(input.kayak_partner_pref || input.kayakPartnerPref || "").trim().slice(0, 160),
+    kayakExperience: String(input.kayak_experience || input.kayakExperience || input.experienceLevel || "").slice(0, 40),
+    stayingOvernight,
+    stayOvernight: stayingOvernight === "yes",
+    hasTent: String(input.has_tent || input.hasTent || "").slice(0, 40),
+    hasSleepingBag: String(input.has_sleeping_bag || input.hasSleepingBag || "").slice(0, 40),
+    eatingGroupFood: input.eating_group_food ?? input.eatingGroupFood ?? true,
+    dietaryPref: String(input.dietary_pref || input.dietaryPref || "meat").slice(0, 40),
+    allergies: String(input.allergies || "").trim().slice(0, 500),
+    wantsDrinks: String(input.wants_drinks || input.wantsDrinks || "no").slice(0, 40),
+    wantsSauna: boolValue(input.wants_sauna ?? input.wantsSauna),
+    tshirtSize: String(input.tshirt_size || input.tshirtSize || "").slice(0, 12),
+    canHelpWith: Array.isArray(input.can_help_with || input.canHelpWith) ? (input.can_help_with || input.canHelpWith).map(String).slice(0, 12) : [],
+    comments: String(input.comments || input.notes || "").trim().slice(0, 800),
+    notes: String(input.comments || input.notes || "").trim().slice(0, 800),
+    emergencyContactName: String(input.emergency_contact_name || input.emergencyContactName || "").trim().slice(0, 120),
+    emergencyContactPhone: String(input.emergency_contact_phone || input.emergencyContactPhone || "").trim().slice(0, 80),
+    transportThere: canDrive === "yes" || canDrive === "bolt_drive" ? "driving" : transportThere,
+    transportBack: canDrive === "yes" || canDrive === "bolt_drive" ? "driving" : transportBack,
+    seatsThere: totalSeats,
+    seatsBack: totalSeats,
+    departureArea: startingFrom,
+    carSeats: totalSeats,
+    comingByCar: canDrive === "yes" || canDrive === "bolt_drive"
+  };
+}
+
+function cleanAvailability(value) {
+  if (!value || typeof value !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([date, availability]) => [String(date).slice(0, 100), String(availability).slice(0, 20)])
+      .filter(([, availability]) => ["yes", "maybe", "no"].includes(availability))
+  );
 }
 
 function publicState(state) {
@@ -184,6 +300,19 @@ function publicState(state) {
     carSeats: guest.carSeats,
     plusOne: guest.plusOne,
     plusOneName: guest.plusOneName,
+    plusOnes: guest.plusOnes,
+    dateAvailability: guest.dateAvailability,
+    canDrive: guest.canDrive,
+    totalSeats: guest.totalSeats,
+    startingFrom: guest.startingFrom,
+    kayakPartnerPref: guest.kayakPartnerPref,
+    kayakExperience: guest.kayakExperience,
+    stayingOvernight: guest.stayingOvernight,
+    dietaryPref: guest.dietaryPref,
+    wantsDrinks: guest.wantsDrinks,
+    wantsSauna: guest.wantsSauna,
+    tshirtSize: guest.tshirtSize,
+    canHelpWith: guest.canHelpWith,
     food: guest.food,
     boat: guest.boat
   }));
