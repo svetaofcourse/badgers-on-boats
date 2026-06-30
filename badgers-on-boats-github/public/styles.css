@@ -277,6 +277,28 @@ h3 {
   font-size: 1rem;
 }
 
+.welcome-note {
+  margin-top: 12px;
+}
+
+.calendar-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  margin-top: 12px;
+  border: 2px solid var(--bolt-green);
+  border-radius: var(--radius-full);
+  color: var(--bolt-green-dark);
+  background: var(--bolt-green-light);
+  padding: 0 20px;
+  font-weight: 750;
+}
+
+.calendar-link:hover {
+  background: var(--bolt-mint);
+}
+
 .step-subtitle {
   margin-bottom: 30px;
 }
@@ -390,69 +412,6 @@ select:focus {
 .option-desc {
   color: var(--bolt-gray-500);
   font-size: 0.76rem;
-}
-
-.date-grid {
-  display: grid;
-  gap: 8px;
-}
-
-.date-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  align-items: center;
-  border: 2px solid var(--bolt-gray-200);
-  border-radius: var(--radius-md);
-  background: var(--bolt-white);
-  padding: 12px 16px;
-}
-
-.date-row.has-selection {
-  border-color: var(--bolt-gray-300);
-}
-
-.date-label {
-  color: var(--bolt-dark);
-  font-size: 0.95rem;
-  font-weight: 650;
-}
-
-.date-options {
-  display: flex;
-  gap: 6px;
-}
-
-.date-btn {
-  width: 40px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--bolt-gray-200);
-  border-radius: var(--radius-sm);
-  background: var(--bolt-white);
-  color: var(--bolt-gray-500);
-  cursor: pointer;
-  font-weight: 750;
-}
-
-.date-btn.yes {
-  border-color: var(--bolt-green);
-  background: var(--bolt-green);
-  color: white;
-}
-
-.date-btn.maybe {
-  border-color: var(--bolt-yellow);
-  background: var(--bolt-yellow);
-  color: white;
-}
-
-.date-btn.no {
-  border-color: var(--bolt-red);
-  background: var(--bolt-red);
-  color: white;
 }
 
 .conditional {
@@ -707,11 +666,6 @@ select:focus {
 .guest-list,
 .admin-guests,
 .admin-board,
-.date-summary {
-  display: grid;
-  gap: 14px;
-}
-
 .guest-list {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -802,37 +756,6 @@ select:focus {
 .board-column li {
   border-top: 1px solid var(--bolt-gray-100);
   padding-top: 10px;
-}
-
-.date-rank-bar {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) 44px;
-  gap: 12px;
-  align-items: center;
-}
-
-.date-rank-track {
-  height: 30px;
-  display: flex;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: var(--bolt-gray-100);
-}
-
-.date-rank-fill {
-  display: grid;
-  place-items: center;
-  color: white;
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.date-rank-fill.yes {
-  background: var(--bolt-green);
-}
-
-.date-rank-fill.maybe {
-  background: var(--bolt-yellow);
 }
 
 .admin-card {
@@ -942,17 +865,7 @@ select:focus {
     width: 100%;
   }
 
-  .review-row,
-  .date-row,
-  .date-rank-bar {
+  .review-row {
     grid-template-columns: 1fr;
-  }
-
-  .date-options {
-    width: 100%;
-  }
-
-  .date-btn {
-    flex: 1;
   }
 }

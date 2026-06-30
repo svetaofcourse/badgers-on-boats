@@ -42,7 +42,9 @@
                 </svg>
               </div>
               <h1>Bolt <span>Kayak Trip</span><br />2026</h1>
-              <p>Time for our yearly kayaking adventure. Fill out this form to register. It takes about 3 minutes.</p>
+              <p>Time for our yearly kayaking adventure. The dates are set: we are traveling on July 25-26, 2026.</p>
+              <a class="calendar-link" id="calendarLink" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Bolt%20Kayak%20Trip%202026&dates=20260725%2F20260727&details=Placeholder%20for%20the%20Bolt%20Kayak%20Trip%202026.%20Trip%20details%20and%20final%20meeting%20point%20will%20be%20shared%20closer%20to%20the%20date.&location=To%20be%20decided" target="_blank" rel="noreferrer">Add July 25-26 to Google Calendar</a>
+              <p class="welcome-note">Fill out this form to register. It takes about 3 minutes.</p>
               <button class="start-btn" type="button" id="startButton">Let's go</button>
             </div>
           </section>
@@ -77,15 +79,6 @@
           <section class="step" data-step="3">
             <div class="step-content">
               <div class="step-number">3</div>
-              <h2>When are you free?</h2>
-              <p class="step-subtitle">Mark your availability for each weekend. This helps us pick the best date.</p>
-              <div class="date-grid" id="dateGrid"></div>
-            </div>
-          </section>
-
-          <section class="step" data-step="4">
-            <div class="step-content">
-              <div class="step-number">4</div>
               <h2>Getting there</h2>
               <p class="step-subtitle">Passengers chip in for fuel. Drivers do the hero work.</p>
               <label class="field-group">Can you drive?</label>
@@ -112,9 +105,9 @@
             </div>
           </section>
 
-          <section class="step" data-step="5">
+          <section class="step" data-step="4">
             <div class="step-content">
-              <div class="step-number">5</div>
+              <div class="step-number">4</div>
               <h2>Kayak time</h2>
               <p class="step-subtitle">You'll share a 2-person kayak. If you don't pick a partner, we'll match you.</p>
               <label class="field-group">Preferred kayak partner <small>Must be mutual. Leave blank for random.</small><input id="f_kayak_partner" list="participantList" placeholder="Name or leave blank" /></label>
@@ -127,9 +120,9 @@
             </div>
           </section>
 
-          <section class="step" data-step="6">
+          <section class="step" data-step="5">
             <div class="step-content">
-              <div class="step-number">6</div>
+              <div class="step-number">5</div>
               <h2>Staying the night?</h2>
               <p class="step-subtitle">Twice as fun if you stay. Big campfire, late-night vibes, stargazing.</p>
               <div class="options-grid cols-3">
@@ -153,9 +146,9 @@
             </div>
           </section>
 
-          <section class="step" data-step="7">
+          <section class="step" data-step="6">
             <div class="step-content">
-              <div class="step-number">7</div>
+              <div class="step-number">6</div>
               <h2>Food and drinks</h2>
               <p class="step-subtitle">We do group food. Everyone chips in based on what they consume.</p>
               <label class="field-group">Eating the group food?</label>
@@ -186,9 +179,9 @@
             </div>
           </section>
 
-          <section class="step" data-step="8">
+          <section class="step" data-step="7">
             <div class="step-content">
-              <div class="step-number">8</div>
+              <div class="step-number">7</div>
               <h2>Almost there</h2>
               <p class="step-subtitle">A few optional things to help us organize.</p>
               <label class="field-group">Can you help with anything? <small>Pick as many as you want</small></label>
@@ -214,7 +207,7 @@
             </div>
           </section>
 
-          <section class="step" data-step="9">
+          <section class="step" data-step="8">
             <div class="step-content">
               <div class="step-number">✓</div>
               <h2>Review and submit</h2>
@@ -274,7 +267,6 @@
           <label class="field-group">Date note <input name="date" /></label>
           <label class="field-group">Destination <input name="location" /></label>
           <label class="field-group">Meeting point <input name="meetingPoint" /></label>
-          <label class="field-group">Weekend date options <textarea name="dateOptions" rows="5"></textarea></label>
           <label class="field-group">Intro <textarea name="intro" rows="3"></textarea></label>
           <div class="form-row">
             <label class="field-group">Fixed costs <input name="fixedCosts" type="number" min="0" step="1" /></label>
@@ -291,11 +283,6 @@
         <div class="card">
           <h3>Overview</h3>
           <div class="stat-grid" id="costGrid"></div>
-        </div>
-
-        <div class="card wide">
-          <h3>Date ranking</h3>
-          <div id="dateSummary" class="date-summary"></div>
         </div>
 
         <div class="card wide">

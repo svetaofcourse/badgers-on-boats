@@ -3,7 +3,7 @@ let adminPin = "";
 let currentStep = 0;
 let plusOneCount = 0;
 
-const totalSteps = 9;
+const totalSteps = 8;
 const formState = {
   options: {
     has_plus_ones: "no",
@@ -15,7 +15,6 @@ const formState = {
     wants_drinks: "no",
     wants_sauna: "no"
   },
-  dateAvailability: {},
   helpWith: []
 };
 
@@ -71,7 +70,6 @@ function calculateCosts() {
 
 function renderTripView() {
   $(".logo").innerHTML = `<span>${escapeHtml(firstWord(state.trip.title || "Bolt"))}</span> ${escapeHtml(restWords(state.trip.title || "Kayak Trip"))} <strong>2026</strong>`;
-  renderDateGrid();
   renderParticipantDatalist();
   renderGuestList();
   updateNav();
@@ -84,22 +82,6 @@ function firstWord(value) {
 function restWords(value) {
   const words = String(value).split(" ");
   return words.slice(1).join(" ") || "Kayak Trip";
-}
-
-function renderDateGrid() {
-  const dates = state.trip.dateOptions?.length ? state.trip.dateOptions : [];
-  $("#dateGrid").innerHTML = dates
-    .map(
-      (date) => `<div class="date-row" data-date="${escapeHtml(date)}">
-        <div class="date-label">${escapeHtml(date)}</div>
-        <div class="date-options">
-          <button class="date-btn" data-avail="yes" type="button" title="Yes">✓</button>
-          <button class="date-btn" data-avail="maybe" type="button" title="Maybe">~</button>
-          <button class="date-btn" data-avail="no" type="button" title="No">×</button>
-        </div>
-      </div>`
-    )
-    .join("");
 }
 
 function renderParticipantDatalist() {
@@ -183,16 +165,6 @@ function toggle(id, show) {
   $(`#${id}`)?.classList.toggle("show", show);
 }
 
-function setDateAvailability(button) {
-  const row = button.closest(".date-row");
-  const date = row.dataset.date;
-  const availability = button.dataset.avail;
-  row.querySelectorAll(".date-btn").forEach((item) => item.classList.remove("yes", "maybe", "no"));
-  button.classList.add(availability);
-  row.classList.add("has-selection");
-  formState.dateAvailability[date] = availability;
-}
-
 function addPlusOne() {
   plusOneCount += 1;
   const id = `plus_one_${plusOneCount}`;
@@ -233,7 +205,6 @@ function collectData() {
     email: $("#f_email").value.trim(),
     phone: $("#f_phone").value.trim(),
     plus_ones: plusOnes,
-    date_availability: formState.dateAvailability,
     can_drive: formState.options.can_drive || "no",
     total_seats: $("#f_total_seats").value || null,
     starting_from: startingFrom === "other" ? customStart : startingFrom,
@@ -258,12 +229,6 @@ function collectData() {
 
 function buildReview() {
   const data = collectData();
-  const datesYes = Object.entries(data.date_availability)
-    .filter(([, value]) => value === "yes")
-    .map(([date]) => date);
-  const datesMaybe = Object.entries(data.date_availability)
-    .filter(([, value]) => value === "maybe")
-    .map(([date]) => date);
   const drinksLabel = { yes: "Yes", soft: "Soft drinks only", no: "No thanks" }[data.wants_drinks] || data.wants_drinks;
 
   $("#reviewContent").innerHTML = [
@@ -273,20 +238,17 @@ function buildReview() {
       ["Phone", data.phone],
       ["+1s", data.plus_ones.map((item) => item.name).join(", ") || "None"]
     ]),
-    reviewSection("Availability", 3, [
-      ["Yes", datesYes.join(", ") || "None"],
-      ["Maybe", datesMaybe.join(", ") || "None"]
-    ]),
-    reviewSection("Transportation", 4, [
+    reviewSection("Trip date", null, [["Date", "July 25-26, 2026"]]),
+    reviewSection("Transportation", 3, [
       ["Driver", `${data.can_drive}${data.total_seats ? ` (${data.total_seats} seats)` : ""}`],
       ["Starting from", data.starting_from || "Not set"],
       ["Ride buddy", data.preferred_car_buddy || "No preference"]
     ]),
-    reviewSection("Kayaking", 5, [
+    reviewSection("Kayaking", 4, [
       ["Partner", data.kayak_partner_pref || "Assign me"],
       ["Experience", data.kayak_experience || "Not set"]
     ]),
-    reviewSection("Overnight and Food", 6, [
+    reviewSection("Overnight and Food", 5, [
       ["Staying", data.staying_overnight],
       ["Tent", data.has_tent || "-"],
       ["Food", data.eating_group_food ? data.dietary_pref : "Bringing own"],
@@ -294,7 +256,7 @@ function buildReview() {
       ["Drinks", drinksLabel],
       ["Sauna", data.wants_sauna ? "Yes" : "No"]
     ]),
-    reviewSection("Extras", 8, [
+    reviewSection("Extras", 7, [
       ["T-shirt", data.tshirt_size || "-"],
       ["Helping with", data.can_help_with.join(", ") || "-"],
       ["Emergency", data.emergency_contact_name ? `${data.emergency_contact_name} (${data.emergency_contact_phone || "no phone"})` : "-"],
@@ -307,7 +269,7 @@ function reviewSection(title, step, rows) {
   return `<section class="review-section">
     <div class="review-section-header">
       <h4>${escapeHtml(title)}</h4>
-      <button class="review-edit-btn" data-review-step="${step}" type="button">Edit</button>
+      ${step ? `<button class="review-edit-btn" data-review-step="${step}" type="button">Edit</button>` : ""}
     </div>
     ${rows.map(([label, value]) => `<div class="review-row"><span class="label">${escapeHtml(label)}</span><span class="value">${escapeHtml(value)}</span></div>`).join("")}
   </section>`;
@@ -339,7 +301,6 @@ function resetFormFlow() {
   $("#guestForm").reset();
   $("#plusOneList").innerHTML = "";
   plusOneCount = 0;
-  formState.dateAvailability = {};
   formState.helpWith = [];
   formState.options = {
     has_plus_ones: "no",
@@ -355,7 +316,6 @@ function resetFormFlow() {
   $$('[data-field="has_plus_ones"][data-value="no"], [data-field="can_drive"][data-value="no"], [data-field="kayak_experience"][data-value="intermediate"], [data-field="staying_overnight"][data-value="no"], [data-field="eating_group_food"][data-value="yes"], [data-field="dietary_pref"][data-value="meat"], [data-field="wants_drinks"][data-value="no"], [data-field="wants_sauna"][data-value="no"]').forEach((item) => item.classList.add("selected"));
   $$(".conditional").forEach((item) => item.classList.remove("show"));
   $("#foodSection").classList.add("show");
-  renderDateGrid();
   $("#successPanel").classList.add("hidden");
   $("#app").classList.remove("hidden");
   goToStep(0);
@@ -397,7 +357,6 @@ function fillSettingsForm() {
 function renderAdmin() {
   $("#adminCount").textContent = `${state.guests.length} registered`;
   renderCosts();
-  renderDateSummary();
   renderTransportBoard();
   renderAdminGuests();
 }
@@ -418,32 +377,6 @@ function renderCosts() {
   ]
     .map(([label, value]) => `<div class="stat-card"><div class="stat-value">${escapeHtml(value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`)
     .join("");
-}
-
-function renderDateSummary() {
-  const summaries = dateSummaries();
-  const maxScore = Math.max(1, ...summaries.map((item) => item.score));
-  $("#dateSummary").innerHTML = summaries
-    .map((item) => `<div class="date-rank-bar">
-      <div class="date-rank-label">${escapeHtml(item.date)}</div>
-      <div class="date-rank-track">
-        <div class="date-rank-fill yes" style="width:${(item.yes / maxScore) * 100}%">${item.yes || ""}</div>
-        <div class="date-rank-fill maybe" style="width:${((item.maybe * 0.5) / maxScore) * 100}%">${item.maybe || ""}</div>
-      </div>
-      <strong>${item.score}</strong>
-    </div>`)
-    .join("");
-}
-
-function dateSummaries() {
-  return (state.trip.dateOptions || [])
-    .map((date) => {
-      const votes = state.guests.map((guest) => guest.dateAvailability?.[date]).filter(Boolean);
-      const yes = votes.filter((vote) => vote === "yes").length;
-      const maybe = votes.filter((vote) => vote === "maybe").length;
-      return { date, yes, maybe, score: yes + maybe * 0.5 };
-    })
-    .sort((a, b) => b.score - a.score);
 }
 
 function renderTransportBoard() {
@@ -545,8 +478,6 @@ $("#addPlusOneButton").addEventListener("click", addPlusOne);
 document.addEventListener("click", (event) => {
   const option = event.target.closest(".option-card");
   if (option) selectOption(option);
-  const dateButton = event.target.closest(".date-btn");
-  if (dateButton) setDateAvailability(dateButton);
   const chip = event.target.closest(".chip[data-help]");
   if (chip) toggleHelp(chip);
   const remove = event.target.closest("[data-remove-plus-one]");
@@ -598,7 +529,7 @@ $("#settingsForm").addEventListener("submit", async (event) => {
           date: data.date,
           location: data.location,
           meetingPoint: data.meetingPoint,
-          dateOptions: splitLines(data.dateOptions),
+          dateOptions: [],
           intro: data.intro
         },
         costs: {

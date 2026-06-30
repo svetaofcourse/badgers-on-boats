@@ -12,28 +12,13 @@ const stateFile = join(dataDir, "state.json");
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
 
-const defaultWeekendDates = [
-  "June 20-21",
-  "June 27-28",
-  "July 4-5",
-  "July 11-12",
-  "July 18-19",
-  "July 25-26",
-  "Aug 1-2",
-  "Aug 8-9",
-  "Aug 15-16",
-  "Aug 22-23",
-  "Aug 29-30",
-  "Sep 5-6"
-];
-
 const defaultState = {
   trip: {
     title: "Bolt Kayak Trip",
-    date: "2026 weekend vote",
+    date: "July 25-26, 2026",
     location: "To be decided",
     meetingPoint: "Bolt HQ or pickup points",
-    dateOptions: defaultWeekendDates,
+    dateOptions: [],
     placeOptions: [],
     adminPin: process.env.ADMIN_PIN || "kayak2026",
     intro:
@@ -108,12 +93,12 @@ function normalizeState(state) {
       ...defaultState.trip,
       ...state.trip,
       title: oldDefaultTitle ? defaultState.trip.title : state.trip.title,
-      date: state.trip?.date === "Date options coming soon" ? defaultState.trip.date : state.trip?.date || defaultState.trip.date,
+      date: ["Date options coming soon", "2026 weekend vote"].includes(state.trip?.date) ? defaultState.trip.date : state.trip?.date || defaultState.trip.date,
       location: state.trip?.location || defaultState.trip.location,
       meetingPoint: state.trip?.meetingPoint || defaultState.trip.meetingPoint,
       intro: oldDefaultTitle ? defaultState.trip.intro : state.trip?.intro || defaultState.trip.intro,
       adminPin: state.trip?.adminPin === "change-this-pin" ? defaultState.trip.adminPin : state.trip?.adminPin || defaultState.trip.adminPin,
-      dateOptions: cleanOptions(state.trip?.dateOptions).length ? cleanOptions(state.trip?.dateOptions) : defaultState.trip.dateOptions,
+      dateOptions: cleanOptions(state.trip?.dateOptions),
       placeOptions: cleanOptions(state.trip?.placeOptions)
     },
     costs: { ...defaultState.costs, ...state.costs },
