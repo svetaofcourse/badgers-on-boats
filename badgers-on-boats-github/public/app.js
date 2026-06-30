@@ -122,6 +122,7 @@ function updateNav() {
   const prev = $("#prevBtn");
   const next = $("#nextBtn");
   const counter = $("#stepCounter");
+  document.body.classList.toggle("registration-active", currentStep > 0);
   nav.style.display = currentStep === 0 ? "none" : "flex";
   prev.style.visibility = currentStep <= 1 ? "hidden" : "visible";
   counter.textContent = currentStep === 0 ? "" : `Step ${currentStep} of ${totalSteps}`;

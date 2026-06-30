@@ -109,6 +109,11 @@ a {
   padding: 8px 10px;
 }
 
+.registration-active .header-links,
+.registration-active .registration-side-panel {
+  display: none;
+}
+
 .step-counter {
   justify-self: end;
   color: var(--bolt-gray-500);
@@ -879,6 +884,20 @@ select:focus {
   .header-links {
     grid-column: 1 / -1;
     justify-content: center;
+  }
+
+  .registration-active .form-header {
+    height: 64px;
+    align-items: center;
+    padding-top: 0;
+  }
+
+  .registration-active .progress-bar {
+    top: 64px;
+  }
+
+  .registration-active .steps-viewport {
+    margin-top: 68px;
   }
 
   .progress-bar {
