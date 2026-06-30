@@ -324,25 +324,51 @@ function resetFormFlow() {
 function renderGuestList() {
   const list = $("#guestList");
   if (!state.guests.length) {
-    list.innerHTML = `<article class="guest-card"><h3>No registrations yet</h3><p>Be the first to sign up.</p></article>`;
+    list.innerHTML = `<article class="guest-empty"><h3>No registrations yet</h3><p>Be the first to sign up.</p></article>`;
     return;
   }
-  list.innerHTML = state.guests
-    .map((guest) => `<article class="guest-card">
-      <h3>${escapeHtml(guest.name)}</h3>
-      <p>${guest.plusOneName ? `With ${escapeHtml(guest.plusOneName)}` : "Solo registration"}</p>
-      <div class="chips">
-        ${chip(labelDriver(guest.canDrive))}
-        ${chip(labelStay(guest.stayingOvernight))}
-        ${chip(labelExperience(guest.kayakExperience))}
-        ${guest.dietaryPref ? chip(guest.dietaryPref) : ""}
-      </div>
-    </article>`)
-    .join("");
+  const costs = calculateCosts();
+  list.innerHTML = `<div class="guest-summary" aria-label="Registration summary">
+      ${summaryItem("Registered", state.guests.length)}
+      ${summaryItem("People", costs.people)}
+      ${summaryItem("Drivers", driverCount())}
+      ${summaryItem("Seats", seatCount())}
+      ${summaryItem("Overnight", overnightCount())}
+    </div>
+    <div class="guest-table-wrap">
+      <table class="guest-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Party</th>
+            <th>Transport</th>
+            <th>Overnight</th>
+            <th>Kayak</th>
+            <th>Food</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.guests.map(guestRow).join("")}
+        </tbody>
+      </table>
+    </div>`;
 }
 
-function chip(text) {
-  return `<span class="chip">${escapeHtml(text)}</span>`;
+function summaryItem(label, value) {
+  return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function guestRow(guest) {
+  const plusOnes = guest.plusOnes?.length || (guest.plusOne ? 1 : 0);
+  const partySize = 1 + plusOnes;
+  return `<tr>
+    <td data-label="Name"><strong>${escapeHtml(guest.name)}</strong>${guest.plusOneName ? `<span>With ${escapeHtml(guest.plusOneName)}</span>` : ""}</td>
+    <td data-label="Party">${partySize} ${partySize === 1 ? "person" : "people"}</td>
+    <td data-label="Transport">${escapeHtml(labelDriver(guest.canDrive))}${guest.totalSeats ? `<span>${escapeHtml(guest.totalSeats)} seats</span>` : ""}</td>
+    <td data-label="Overnight">${escapeHtml(labelStay(guest.stayingOvernight))}</td>
+    <td data-label="Kayak">${escapeHtml(labelExperience(guest.kayakExperience))}</td>
+    <td data-label="Food">${escapeHtml(guest.eatingGroupFood ? guest.dietaryPref || "group food" : "own food")}</td>
+  </tr>`;
 }
 
 function fillSettingsForm() {

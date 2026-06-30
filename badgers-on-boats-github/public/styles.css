@@ -665,12 +665,17 @@ select:focus {
 
 .guest-list,
 .admin-guests,
-.admin-board,
-.guest-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.admin-board {
+  display: grid;
+  gap: 14px;
 }
 
-.guest-card,
+.guest-list {
+  display: grid;
+  gap: 14px;
+}
+
+.guest-empty,
 .card,
 .stat-card,
 .board-column,
@@ -680,18 +685,93 @@ select:focus {
   box-shadow: var(--shadow-sm);
 }
 
-.guest-card,
+.guest-empty,
 .card,
 .board-column,
 .admin-card {
   padding: 20px;
 }
 
-.guest-card p,
+.guest-empty p,
 .admin-header p,
 .admin-card p {
   color: var(--bolt-gray-500);
   margin-bottom: 0;
+}
+
+.guest-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--bolt-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--bolt-gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.guest-summary div {
+  display: grid;
+  gap: 4px;
+  background: var(--bolt-white);
+  padding: 16px;
+}
+
+.guest-summary span {
+  color: var(--bolt-gray-500);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.guest-summary strong {
+  color: var(--bolt-green);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.guest-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  background: var(--bolt-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.guest-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+  font-size: 0.92rem;
+}
+
+.guest-table th,
+.guest-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--bolt-gray-100);
+  vertical-align: top;
+}
+
+.guest-table th {
+  color: var(--bolt-gray-500);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.guest-table td strong,
+.guest-table td span {
+  display: block;
+}
+
+.guest-table td span {
+  color: var(--bolt-gray-500);
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.guest-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .admin-grid {
@@ -815,7 +895,6 @@ select:focus {
 
   .options-grid.cols-2,
   .options-grid.cols-3,
-  .guest-list,
   .admin-grid,
   .admin-board,
   .form-row,
@@ -833,6 +912,10 @@ select:focus {
 
   .login {
     flex-wrap: wrap;
+  }
+
+  .guest-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -867,5 +950,50 @@ select:focus {
 
   .review-row {
     grid-template-columns: 1fr;
+  }
+
+  .guest-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-table {
+    min-width: 0;
+  }
+
+  .guest-table thead {
+    display: none;
+  }
+
+  .guest-table,
+  .guest-table tbody,
+  .guest-table tr,
+  .guest-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .guest-table tr {
+    border-bottom: 1px solid var(--bolt-gray-100);
+    padding: 10px 0;
+  }
+
+  .guest-table tr:last-child {
+    border-bottom: 0;
+  }
+
+  .guest-table td {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
+    border-bottom: 0;
+    padding: 7px 16px;
+  }
+
+  .guest-table td::before {
+    content: attr(data-label);
+    color: var(--bolt-gray-500);
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
   }
 }

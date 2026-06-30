@@ -76,7 +76,7 @@ function sendJson(res, status, data) {
 }
 
 function isAdmin(req, state) {
-  return req.headers["x-admin-pin"] === state.trip.adminPin;
+  return String(req.headers["x-admin-pin"] || "").trim() === state.trip.adminPin;
 }
 
 function cleanOptions(value) {
@@ -319,24 +319,30 @@ async function handleApi(req, res) {
 
   if (req.method === "POST" && req.url === "/api/guests") {
     const guest = cleanGuest(await readBody(req));
-    if (!guest.name || !guest.phone) {
-      sendJson(res, 400, { error: "Name and phone are required." });
+    if (!guest.name || !guest.email || !guest.phone) {
+      sendJson(res, 400, { error: "Name, email, and phone are required." });
       return;
     }
-    state.guests.push({
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      ...guest
-    });
+    const existing = state.guests.find((item) => item.email?.toLowerCase() === guest.email.toLowerCase());
+    if (existing) {
+      Object.assign(existing, guest, { updatedAt: new Date().toISOString() });
+    } else {
+      state.guests.push({
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        ...guest
+      });
+    }
     await writeState(state);
-    sendJson(res, 201, publicState(state));
+    sendJson(res, existing ? 200 : 201, publicState(state));
     return;
   }
 
   if (req.method === "POST" && req.url === "/api/admin/login") {
     const body = await readBody(req);
-    sendJson(res, body.pin === state.trip.adminPin ? 200 : 401, {
-      ok: body.pin === state.trip.adminPin
+    const pin = String(body.pin || "").trim();
+    sendJson(res, pin === state.trip.adminPin ? 200 : 401, {
+      ok: pin === state.trip.adminPin
     });
     return;
   }
