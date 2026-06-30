@@ -24,13 +24,6 @@ const defaultState = {
     intro:
       "Time for our yearly kayaking adventure. Register your availability, rides, kayak plans, food, gear, and extras."
   },
-  costs: {
-    fixedCosts: 260,
-    perPersonCost: 38,
-    perCarCost: 18,
-    depositPerPerson: 25,
-    currency: "EUR"
-  },
   guests: []
 };
 
@@ -101,9 +94,9 @@ function normalizeState(state) {
       dateOptions: cleanOptions(state.trip?.dateOptions),
       placeOptions: cleanOptions(state.trip?.placeOptions)
     },
-    costs: { ...defaultState.costs, ...state.costs },
     guests: Array.isArray(state.guests) ? state.guests.map(normalizeGuest) : []
   };
+  delete normalized.costs;
   if (process.env.ADMIN_PIN) normalized.trip.adminPin = process.env.ADMIN_PIN;
   return normalized;
 }
@@ -301,12 +294,12 @@ function publicState(state) {
     food: guest.food,
     boat: guest.boat
   }));
-  return { trip, costs: state.costs, guests };
+  return { trip, guests };
 }
 
 function adminState(state) {
   const { adminPin, ...trip } = state.trip;
-  return { trip, costs: state.costs, guests: state.guests };
+  return { trip, guests: state.guests };
 }
 
 async function handleApi(req, res) {
@@ -366,7 +359,6 @@ async function handleApi(req, res) {
       placeOptions: cleanOptions(body.trip?.placeOptions),
       adminPin: state.trip.adminPin
     };
-    state.costs = { ...state.costs, ...body.costs };
     await writeState(state);
     sendJson(res, 200, adminState(state));
     return;
@@ -396,7 +388,8 @@ async function handleApi(req, res) {
 }
 
 async function serveStatic(req, res) {
-  const requested = req.url === "/" ? "/index.html" : req.url.split("?")[0];
+  const pathname = req.url.split("?")[0];
+  const requested = pathname === "/" ? "/index.html" : pathname;
   const safePath = normalize(decodeURIComponent(requested)).replace(/^(\.\.[/\\])+/, "");
   const filePath = join(publicDir, safePath);
   if (!filePath.startsWith(publicDir)) {

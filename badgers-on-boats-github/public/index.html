@@ -268,21 +268,21 @@
           <label class="field-group">Destination <input name="location" /></label>
           <label class="field-group">Meeting point <input name="meetingPoint" /></label>
           <label class="field-group">Intro <textarea name="intro" rows="3"></textarea></label>
-          <div class="form-row">
-            <label class="field-group">Fixed costs <input name="fixedCosts" type="number" min="0" step="1" /></label>
-            <label class="field-group">Cost per person <input name="perPersonCost" type="number" min="0" step="1" /></label>
-          </div>
-          <div class="form-row">
-            <label class="field-group">Cost per car <input name="perCarCost" type="number" min="0" step="1" /></label>
-            <label class="field-group">Currency <input name="currency" maxlength="8" /></label>
-          </div>
           <button class="nav-btn primary" type="submit">Save settings</button>
           <p class="form-status" id="settingsStatus" role="status"></p>
         </form>
 
         <div class="card">
-          <h3>Overview</h3>
-          <div class="stat-grid" id="costGrid"></div>
+          <div class="card-title-row">
+            <h3>Overview</h3>
+            <button class="nav-btn secondary compact" id="exportCsvButton" type="button">Export CSV</button>
+          </div>
+          <div class="stat-grid" id="overviewGrid"></div>
+        </div>
+
+        <div class="card wide">
+          <h3>Recommended assignments</h3>
+          <div class="assignment-grid" id="assignmentBoard"></div>
         </div>
 
         <div class="card wide">

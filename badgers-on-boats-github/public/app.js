@@ -20,7 +20,6 @@ const formState = {
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
-const fmt = (value) => `${Math.round(value)} ${state?.costs.currency || "EUR"}`;
 
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
@@ -51,21 +50,6 @@ function seatCount() {
 
 function overnightCount() {
   return state.guests.filter((guest) => guest.stayingOvernight === "yes" || guest.stayOvernight).length;
-}
-
-function calculateCosts() {
-  const people = participantCount();
-  const cars = driverCount();
-  const total =
-    Number(state.costs.fixedCosts || 0) +
-    people * Number(state.costs.perPersonCost || 0) +
-    cars * Number(state.costs.perCarCost || 0);
-  return {
-    people,
-    cars,
-    total,
-    perPerson: people ? total / people : 0
-  };
 }
 
 function renderTripView() {
@@ -328,10 +312,9 @@ function renderGuestList() {
     list.innerHTML = `<article class="guest-empty"><h3>No registrations yet</h3><p>Be the first to sign up.</p></article>`;
     return;
   }
-  const costs = calculateCosts();
   list.innerHTML = `<div class="guest-summary" aria-label="Registration summary">
       ${summaryItem("Registered", state.guests.length)}
-      ${summaryItem("People", costs.people)}
+      ${summaryItem("People", participantCount())}
       ${summaryItem("Drivers", driverCount())}
       ${summaryItem("Seats", seatCount())}
       ${summaryItem("Overnight", overnightCount())}
@@ -374,7 +357,7 @@ function guestRow(guest) {
 
 function fillSettingsForm() {
   const form = $("#settingsForm");
-  Object.entries({ ...state.trip, ...state.costs }).forEach(([key, value]) => {
+  Object.entries(state.trip).forEach(([key, value]) => {
     const input = form.elements[key];
     if (!input) return;
     input.value = Array.isArray(value) ? value.join("\n") : value;
@@ -383,27 +366,189 @@ function fillSettingsForm() {
 
 function renderAdmin() {
   $("#adminCount").textContent = `${state.guests.length} registered`;
-  renderCosts();
+  renderOverview();
+  renderAssignments();
   renderTransportBoard();
   renderAdminGuests();
 }
 
-function renderCosts() {
-  const costs = calculateCosts();
+function renderOverview() {
   const diet = countBy(state.guests.filter((guest) => guest.eatingGroupFood), "dietaryPref");
-  $("#costGrid").innerHTML = [
+  $("#overviewGrid").innerHTML = [
     ["Registered", state.guests.length],
-    ["People", costs.people],
+    ["People", participantCount()],
     ["Drivers", driverCount()],
     ["Total seats", seatCount()],
     ["Overnight", overnightCount()],
     ["Need tent", state.guests.filter((guest) => guest.stayingOvernight === "yes" && guest.hasTent === "no").length],
     ["Meat", diet.meat || 0],
-    ["Veg/Vegan", (diet.vegetarian || 0) + (diet.vegan || 0)],
-    ["Per person est.", fmt(costs.perPerson)]
+    ["Veg/Vegan", (diet.vegetarian || 0) + (diet.vegan || 0)]
   ]
     .map(([label, value]) => `<div class="stat-card"><div class="stat-value">${escapeHtml(value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`)
     .join("");
+}
+
+function renderAssignments() {
+  $("#assignmentBoard").innerHTML = [
+    assignmentColumn("Cars", buildCarAssignments()),
+    assignmentColumn("Tents", buildTentAssignments())
+  ].join("");
+}
+
+function assignmentColumn(title, items) {
+  const content = items.length
+    ? items.map((item) => `<li class="${item.warning ? "warning" : ""}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></li>`).join("")
+    : `<li><span>No recommendations yet.</span></li>`;
+  return `<section class="assignment-column"><h4>${escapeHtml(title)}</h4><ul>${content}</ul></section>`;
+}
+
+function buildCarAssignments() {
+  const drivers = state.guests
+    .filter((guest) => ["yes", "bolt_drive"].includes(guest.canDrive))
+    .map((guest) => ({
+      guest,
+      overnight: isOvernight(guest),
+      remaining: Math.max(0, Number(guest.totalSeats || 0) - partySize(guest)),
+      passengers: []
+    }));
+  const passengers = state.guests
+    .filter((guest) => !["yes", "bolt_drive"].includes(guest.canDrive))
+    .map((guest) => ({ guest, overnight: isOvernight(guest), size: partySize(guest) }));
+  const items = [];
+
+  passengers.forEach((passenger) => {
+    const exact = drivers.find((driver) => driver.overnight === passenger.overnight && driver.remaining >= passenger.size);
+    const fallback = exact || drivers.find((driver) => driver.remaining >= passenger.size);
+    if (!fallback) {
+      items.push({
+        title: `Find ride for ${partyLabel(passenger.guest)}`,
+        detail: `${labelStay(passenger.guest.stayingOvernight)} from ${passenger.guest.startingFrom || "TBD"}`,
+        warning: true
+      });
+      return;
+    }
+    fallback.remaining -= passenger.size;
+    fallback.passengers.push(passenger);
+  });
+
+  drivers.forEach((driver) => {
+    const passengerNames = driver.passengers.map((item) => partyLabel(item.guest)).join(", ");
+    const mismatch = driver.passengers.some((item) => item.overnight !== driver.overnight);
+    items.push({
+      title: passengerNames ? `${partyLabel(driver.guest)} + ${passengerNames}` : `${partyLabel(driver.guest)} has ${driver.remaining} open seat${driver.remaining === 1 ? "" : "s"}`,
+      detail: `${labelDriver(driver.guest.canDrive)}, ${labelStay(driver.guest.stayingOvernight)}${mismatch ? " - check return/stay mismatch" : ""}`,
+      warning: mismatch
+    });
+  });
+
+  return items;
+}
+
+function buildTentAssignments() {
+  const hosts = state.guests
+    .filter((guest) => isOvernight(guest) && ["yes", "share"].includes(guest.hasTent))
+    .map((guest) => ({ guest, open: guest.hasTent === "share" ? 1 : 0, assigned: [] }));
+  const needTent = state.guests.filter((guest) => isOvernight(guest) && guest.hasTent === "no");
+  const items = [];
+
+  needTent.forEach((guest) => {
+    const host = hosts.find((item) => item.open > 0);
+    if (!host) {
+      items.push({
+        title: `Tent needed for ${partyLabel(guest)}`,
+        detail: "No sharing tent marked available.",
+        warning: true
+      });
+      return;
+    }
+    host.open -= 1;
+    host.assigned.push(guest);
+  });
+
+  hosts.forEach((host) => {
+    if (!host.assigned.length && host.guest.hasTent !== "share") return;
+    items.push({
+      title: host.assigned.length ? `${partyLabel(host.guest)} shares with ${host.assigned.map(partyLabel).join(", ")}` : `${partyLabel(host.guest)} can share a tent`,
+      detail: host.open ? `${host.open} open sharing spot` : "Tent spot assigned",
+      warning: false
+    });
+  });
+
+  return items;
+}
+
+function partySize(guest) {
+  return 1 + (guest.plusOnes?.length || (guest.plusOne ? 1 : 0));
+}
+
+function partyLabel(guest) {
+  return `${guest.name}${partySize(guest) > 1 ? ` party (${partySize(guest)})` : ""}`;
+}
+
+function isOvernight(guest) {
+  return guest.stayingOvernight === "yes" || guest.stayOvernight;
+}
+
+function exportCsv() {
+  const headers = [
+    "Name",
+    "Email",
+    "Phone",
+    "Plus ones",
+    "Driver",
+    "Seats",
+    "Starting from",
+    "Kayak partner",
+    "Experience",
+    "Overnight",
+    "Tent",
+    "Sleeping bag",
+    "Food",
+    "Allergies",
+    "Drinks",
+    "Sauna",
+    "T-shirt",
+    "Help",
+    "Emergency contact",
+    "Emergency phone",
+    "Notes",
+    "Created"
+  ];
+  const rows = state.guests.map((guest) => [
+    guest.name,
+    guest.email,
+    guest.phone,
+    guest.plusOneName,
+    labelDriver(guest.canDrive),
+    guest.totalSeats || "",
+    guest.startingFrom,
+    guest.kayakPartnerPref,
+    labelExperience(guest.kayakExperience),
+    labelStay(guest.stayingOvernight),
+    guest.hasTent,
+    guest.hasSleepingBag,
+    guest.eatingGroupFood ? guest.dietaryPref : "own food",
+    guest.allergies,
+    guest.wantsDrinks,
+    guest.wantsSauna ? "yes" : "no",
+    guest.tshirtSize,
+    guest.canHelpWith?.join(", "),
+    guest.emergencyContactName,
+    guest.emergencyContactPhone,
+    guest.comments || guest.notes,
+    guest.createdAt
+  ]);
+  const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n")}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "kayak-trip-registrations.csv";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function csvCell(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
 function renderTransportBoard() {
@@ -558,12 +703,6 @@ $("#settingsForm").addEventListener("submit", async (event) => {
           meetingPoint: data.meetingPoint,
           dateOptions: [],
           intro: data.intro
-        },
-        costs: {
-          fixedCosts: Number(data.fixedCosts),
-          perPersonCost: Number(data.perPersonCost),
-          perCarCost: Number(data.perCarCost),
-          currency: data.currency
         }
       })
     });
@@ -582,6 +721,8 @@ $("#adminGuests").addEventListener("click", async (event) => {
   renderTripView();
   renderAdmin();
 });
+
+$("#exportCsvButton").addEventListener("click", exportCsv);
 
 state = await api("/api/state");
 renderTripView();
