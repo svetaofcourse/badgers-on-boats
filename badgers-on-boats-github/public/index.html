@@ -111,6 +111,18 @@
               <h2>Kayak time</h2>
               <p class="step-subtitle">You'll share a 2-person kayak. If you don't pick a partner, we'll match you.</p>
               <label class="field-group">Preferred kayak partner <small>Must be mutual. Leave blank for random.</small><input id="f_kayak_partner" list="participantList" placeholder="Name or leave blank" /></label>
+              <label class="field-group">Preferred kayak type
+                <select id="f_kayak_type">
+                  <option value="any">Any type</option>
+                  <option value="two_person">2-person kayak</option>
+                  <option value="single">Single kayak</option>
+                  <option value="sit_on_top">Stable sit-on-top kayak</option>
+                  <option value="canoe">Canoe</option>
+                  <option value="not_sure">Not sure</option>
+                  <option value="other">Other / depends</option>
+                </select>
+              </label>
+              <label class="field-group">Kayak notes <small>Optional: comfort, stability, storage, or other preferences</small><input id="f_kayak_type_notes" placeholder="e.g. stable kayak, dry storage, okay with canoe" /></label>
               <label class="field-group">Kayaking experience</label>
               <div class="options-grid cols-3">
                 <button class="option-card" data-field="kayak_experience" data-value="beginner" type="button"><span class="option-icon">🐘</span><span class="option-label">Beginner</span><span class="option-desc">First time or rarely</span></button>
@@ -136,6 +148,12 @@
                   <button class="option-card" data-field="has_tent" data-value="yes" type="button"><span class="option-label">Yes, bringing mine</span></button>
                   <button class="option-card" data-field="has_tent" data-value="share" type="button"><span class="option-label">Can share</span></button>
                   <button class="option-card" data-field="has_tent" data-value="no" type="button"><span class="option-label">No, need one</span></button>
+                </div>
+                <div class="conditional" id="tentShareSection">
+                  <div class="form-row">
+                    <label class="field-group">Free tent spots <small>How many people besides you can sleep there?</small><input id="f_tent_share_spots" type="number" min="1" max="5" placeholder="1" /></label>
+                    <label class="field-group">Tent notes <small>Optional</small><input id="f_tent_notes" placeholder="e.g. best for 1 extra person" /></label>
+                  </div>
                 </div>
                 <label class="field-group">Sleeping bag and mat?</label>
                 <div class="options-grid cols-2">

@@ -143,6 +143,7 @@ function selectOption(card) {
   }
   if (field === "can_drive") toggle("driverSection", value === "yes" || value === "bolt_drive");
   if (field === "staying_overnight") toggle("overnightSection", value === "yes" || value === "maybe");
+  if (field === "has_tent") toggle("tentShareSection", value === "share");
   if (field === "eating_group_food") toggle("foodSection", value === "yes");
 }
 
@@ -195,9 +196,13 @@ function collectData() {
     starting_from: startingFrom === "other" ? customStart : startingFrom,
     preferred_car_buddy: $("#f_preferred_car_buddy").value.trim(),
     kayak_partner_pref: $("#f_kayak_partner").value.trim(),
+    kayak_type_pref: $("#f_kayak_type").value,
+    kayak_type_notes: $("#f_kayak_type_notes").value.trim(),
     kayak_experience: formState.options.kayak_experience || "",
     staying_overnight: formState.options.staying_overnight || "no",
     has_tent: formState.options.has_tent || "",
+    tent_share_spots: $("#f_tent_share_spots").value || null,
+    tent_notes: $("#f_tent_notes").value.trim(),
     has_sleeping_bag: formState.options.has_sleeping_bag || "",
     eating_group_food: formState.options.eating_group_food !== "no",
     dietary_pref: formState.options.dietary_pref || "meat",
@@ -231,11 +236,15 @@ function buildReview() {
     ]),
     reviewSection("Kayaking", 4, [
       ["Partner", data.kayak_partner_pref || "Assign me"],
+      ["Kayak type", labelKayakType(data.kayak_type_pref)],
+      ["Kayak notes", data.kayak_type_notes || "-"],
       ["Experience", data.kayak_experience || "Not set"]
     ]),
     reviewSection("Overnight and Food", 5, [
       ["Staying", data.staying_overnight],
-      ["Tent", data.has_tent || "-"],
+      ["Tent", labelTent(data.has_tent)],
+      ["Tent spots", data.has_tent === "share" ? data.tent_share_spots || "1" : "-"],
+      ["Tent notes", data.tent_notes || "-"],
       ["Food", data.eating_group_food ? data.dietary_pref : "Bringing own"],
       ["Allergies", data.allergies || "-"],
       ["Drinks", drinksLabel],
@@ -350,7 +359,7 @@ function guestRow(guest) {
     <td data-label="Party">${partySize} ${partySize === 1 ? "person" : "people"}</td>
     <td data-label="Transport">${escapeHtml(labelDriver(guest.canDrive))}${guest.totalSeats ? `<span>${escapeHtml(guest.totalSeats)} seats</span>` : ""}</td>
     <td data-label="Overnight">${escapeHtml(labelStay(guest.stayingOvernight))}</td>
-    <td data-label="Kayak">${escapeHtml(labelExperience(guest.kayakExperience))}</td>
+    <td data-label="Kayak">${escapeHtml(labelExperience(guest.kayakExperience))}<span>${escapeHtml(labelKayakType(guest.kayakTypePref))}</span></td>
     <td data-label="Food">${escapeHtml(guest.eatingGroupFood ? guest.dietaryPref || "group food" : "own food")}</td>
   </tr>`;
 }
@@ -381,6 +390,7 @@ function renderOverview() {
     ["Total seats", seatCount()],
     ["Overnight", overnightCount()],
     ["Need tent", state.guests.filter((guest) => guest.stayingOvernight === "yes" && guest.hasTent === "no").length],
+    ["Can share tent", state.guests.filter((guest) => isOvernight(guest) && guest.hasTent === "share").length],
     ["Meat", diet.meat || 0],
     ["Veg/Vegan", (diet.vegetarian || 0) + (diet.vegan || 0)]
   ]
@@ -447,7 +457,7 @@ function buildCarAssignments() {
 function buildTentAssignments() {
   const hosts = state.guests
     .filter((guest) => isOvernight(guest) && ["yes", "share"].includes(guest.hasTent))
-    .map((guest) => ({ guest, open: guest.hasTent === "share" ? 1 : 0, assigned: [] }));
+    .map((guest) => ({ guest, open: guest.hasTent === "share" ? Math.max(1, Number(guest.tentShareSpots || 1)) : 0, assigned: [] }));
   const needTent = state.guests.filter((guest) => isOvernight(guest) && guest.hasTent === "no");
   const items = [];
 
@@ -469,7 +479,7 @@ function buildTentAssignments() {
     if (!host.assigned.length && host.guest.hasTent !== "share") return;
     items.push({
       title: host.assigned.length ? `${partyLabel(host.guest)} shares with ${host.assigned.map(partyLabel).join(", ")}` : `${partyLabel(host.guest)} can share a tent`,
-      detail: host.open ? `${host.open} open sharing spot` : "Tent spot assigned",
+      detail: `${host.open ? `${host.open} open sharing spot${host.open === 1 ? "" : "s"}` : "Tent spot assigned"}${host.guest.tentNotes ? ` - ${host.guest.tentNotes}` : ""}`,
       warning: false
     });
   });
@@ -499,9 +509,13 @@ function exportCsv() {
     "Seats",
     "Starting from",
     "Kayak partner",
+    "Kayak type",
+    "Kayak notes",
     "Experience",
     "Overnight",
     "Tent",
+    "Tent share spots",
+    "Tent notes",
     "Sleeping bag",
     "Food",
     "Allergies",
@@ -523,9 +537,13 @@ function exportCsv() {
     guest.totalSeats || "",
     guest.startingFrom,
     guest.kayakPartnerPref,
+    labelKayakType(guest.kayakTypePref),
+    guest.kayakTypeNotes,
     labelExperience(guest.kayakExperience),
     labelStay(guest.stayingOvernight),
-    guest.hasTent,
+    labelTent(guest.hasTent),
+    guest.tentShareSpots,
+    guest.tentNotes,
     guest.hasSleepingBag,
     guest.eatingGroupFood ? guest.dietaryPref : "own food",
     guest.allergies,
@@ -589,9 +607,13 @@ function renderAdminGuests() {
         ${detail("Seats", guest.totalSeats || "-")}
         ${detail("Start", guest.startingFrom || "-")}
         ${detail("Kayak partner", guest.kayakPartnerPref || "Assign")}
+        ${detail("Kayak type", labelKayakType(guest.kayakTypePref))}
+        ${detail("Kayak notes", guest.kayakTypeNotes || "-")}
         ${detail("Experience", labelExperience(guest.kayakExperience))}
         ${detail("Overnight", labelStay(guest.stayingOvernight))}
-        ${detail("Tent", guest.hasTent || "-")}
+        ${detail("Tent", labelTent(guest.hasTent))}
+        ${detail("Tent share", guest.hasTent === "share" ? `${guest.tentShareSpots || 1} spot${Number(guest.tentShareSpots || 1) === 1 ? "" : "s"}` : "-")}
+        ${detail("Tent notes", guest.tentNotes || "-")}
         ${detail("Food", guest.eatingGroupFood ? guest.dietaryPref : "Own")}
         ${detail("Allergies", guest.allergies || "-")}
         ${detail("Drinks", guest.wantsDrinks || "no")}
@@ -626,8 +648,24 @@ function labelStay(value) {
   return { yes: "Overnight", maybe: "Maybe overnight", no: "Day trip" }[value] || "Day trip";
 }
 
+function labelTent(value) {
+  return { yes: "Bringing own", share: "Can share", no: "Needs tent" }[value] || "-";
+}
+
 function labelExperience(value) {
   return { beginner: "Beginner", intermediate: "Some experience", experienced: "Experienced", okay: "Some experience", confident: "Experienced" }[value] || "Not set";
+}
+
+function labelKayakType(value) {
+  return {
+    any: "Any type",
+    two_person: "2-person kayak",
+    single: "Single kayak",
+    sit_on_top: "Stable sit-on-top",
+    canoe: "Canoe",
+    not_sure: "Not sure",
+    other: "Other / depends"
+  }[value] || "Any type";
 }
 
 function splitLines(value) {
