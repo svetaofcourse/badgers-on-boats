@@ -799,6 +799,11 @@ function escapeHtml(value) {
 }
 
 $("#startButton").addEventListener("click", () => goToStep(1));
+$(".logo").addEventListener("click", (event) => {
+  event.preventDefault();
+  resetFormFlow();
+  history.replaceState(null, "", "/");
+});
 $("#nextBtn").addEventListener("click", nextStep);
 $("#prevBtn").addEventListener("click", prevStep);
 $("#anotherResponseButton").addEventListener("click", resetFormFlow);
