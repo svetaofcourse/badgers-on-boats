@@ -46,6 +46,13 @@
               <a class="calendar-link" id="calendarLink" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Bolt%20Kayak%20Trip%202026&dates=20260725%2F20260727&details=Placeholder%20for%20the%20Bolt%20Kayak%20Trip%202026.%20Trip%20details%20and%20final%20meeting%20point%20will%20be%20shared%20closer%20to%20the%20date.&location=To%20be%20decided" target="_blank" rel="noreferrer">Add July 25-26 to Google Calendar</a>
               <p class="welcome-note">Fill out this form to register. It takes about 3 minutes.</p>
               <button class="start-btn" type="button" id="startButton">Let's go</button>
+              <div class="edit-lookup" id="editLookupForm">
+                <h3>Edit your response</h3>
+                <label class="field-group">Email <input id="edit_email" type="email" autocomplete="email" required placeholder="name@example.com" /></label>
+                <label class="field-group">Phone number <input id="edit_phone" autocomplete="tel" required placeholder="+372 5555 1234" /></label>
+                <button class="nav-btn secondary" id="editLookupButton" type="button">Find my response</button>
+                <p class="form-status" id="editLookupStatus" role="status"></p>
+              </div>
             </div>
           </section>
 
@@ -55,8 +62,14 @@
               <h2>Let's start with you</h2>
               <p class="step-subtitle">Basic info so we know who's coming</p>
               <label class="field-group">Full name * <input id="f_name" name="name" autocomplete="name" required placeholder="e.g. Haris Malhi" /></label>
-              <label class="field-group">Bolt email * <input id="f_email" name="email" type="email" autocomplete="email" required placeholder="name@bolt.eu" /></label>
-              <label class="field-group">Phone number * <small>For the trip WhatsApp/Telegram group</small><input id="f_phone" name="phone" autocomplete="tel" required placeholder="+372 5555 1234" /></label>
+              <label class="field-group">Email * <input id="f_email" name="email" type="email" autocomplete="email" required placeholder="name@example.com" /></label>
+              <label class="field-group">Phone number * <small>Use the number organizers should add to the trip WhatsApp/Telegram group</small><input id="f_phone" name="phone" autocomplete="tel" required placeholder="+372 5555 1234" /></label>
+              <label class="field-group">Bolt connection</label>
+              <div class="options-grid cols-3">
+                <button class="option-card selected" data-field="submitter_status" data-value="bolt" type="button"><span class="option-label">Bolt</span></button>
+                <button class="option-card" data-field="submitter_status" data-value="ex_bolt" type="button"><span class="option-label">Ex-Bolt</span></button>
+                <button class="option-card" data-field="submitter_status" data-value="not_bolt" type="button"><span class="option-label">Not Bolt</span></button>
+              </div>
             </div>
           </section>
 
@@ -101,7 +114,7 @@
               <div class="conditional" id="customStartSection">
                 <label class="field-group">Pickup address <input id="f_starting_from_custom" placeholder="Your pickup address" /></label>
               </div>
-              <label class="field-group">Prefer to ride with someone? <small>Optional</small><input id="f_preferred_car_buddy" list="participantList" placeholder="Name(s) or leave blank" /></label>
+              <label class="field-group">Prefer to ride with someone? <small>Optional</small><select id="f_preferred_car_buddy"></select></label>
             </div>
           </section>
 
@@ -110,19 +123,15 @@
               <div class="step-number">4</div>
               <h2>Kayak time</h2>
               <p class="step-subtitle">You'll share a 2-person kayak. If you don't pick a partner, we'll match you.</p>
-              <label class="field-group">Preferred kayak partner <small>Must be mutual. Leave blank for random.</small><input id="f_kayak_partner" list="participantList" placeholder="Name or leave blank" /></label>
+              <label class="field-group">Preferred kayak partner <small>Must be mutual. Leave blank for random.</small><select id="f_kayak_partner"></select></label>
               <label class="field-group">Preferred kayak type
                 <select id="f_kayak_type">
-                  <option value="any">Any type</option>
+                  <option value="any">Don't care</option>
                   <option value="two_person">2-person kayak</option>
-                  <option value="single">Single kayak</option>
-                  <option value="sit_on_top">Stable sit-on-top kayak</option>
-                  <option value="canoe">Canoe</option>
-                  <option value="not_sure">Not sure</option>
-                  <option value="other">Other / depends</option>
+                  <option value="two_person_canoe">2-person canoe</option>
                 </select>
               </label>
-              <label class="field-group">Kayak notes <small>Optional: comfort, stability, storage, or other preferences</small><input id="f_kayak_type_notes" placeholder="e.g. stable kayak, dry storage, okay with canoe" /></label>
+              <label class="field-group">Kayak notes <small>Optional: comfort, stability, storage, or other preferences</small><input id="f_kayak_type_notes" placeholder="e.g. would prefer canoe if available" /></label>
               <label class="field-group">Kayaking experience</label>
               <div class="options-grid cols-3">
                 <button class="option-card" data-field="kayak_experience" data-value="beginner" type="button"><span class="option-icon">🐘</span><span class="option-label">Beginner</span><span class="option-desc">First time or rarely</span></button>
@@ -186,8 +195,8 @@
               <label class="field-group">Drinks?</label>
               <div class="options-grid cols-3">
                 <button class="option-card" data-field="wants_drinks" data-value="yes" type="button"><span class="option-icon">🍺</span><span class="option-label">Yes</span><span class="option-desc">Shared cost</span></button>
-                <button class="option-card" data-field="wants_drinks" data-value="soft" type="button"><span class="option-icon">🥤</span><span class="option-label">Soft only</span></button>
-                <button class="option-card selected" data-field="wants_drinks" data-value="no" type="button"><span class="option-icon">💧</span><span class="option-label">No thanks</span></button>
+                <button class="option-card" data-field="wants_drinks" data-value="soft" type="button"><span class="option-icon">🥤</span><span class="option-label">Soft only</span><span class="option-desc">Shared cost</span></button>
+                <button class="option-card selected" data-field="wants_drinks" data-value="no" type="button"><span class="option-icon">💧</span><span class="option-label">No thanks</span><span class="option-desc">Will bring all my own</span></button>
               </div>
               <label class="field-group">Sauna?</label>
               <div class="options-grid cols-2">
@@ -209,15 +218,6 @@
                 <button class="chip" data-help="setup" type="button">⛺ Camp setup</button>
                 <button class="chip" data-help="dj" type="button">🎵 DJ / Music</button>
                 <button class="chip" data-help="photo" type="button">📷 Photography</button>
-              </div>
-              <label class="field-group">T-shirt size <small>In case we do trip merch</small></label>
-              <div class="options-grid cols-3 sizes-grid">
-                <button class="option-card" data-field="tshirt_size" data-value="XS" type="button"><span class="option-label">XS</span></button>
-                <button class="option-card" data-field="tshirt_size" data-value="S" type="button"><span class="option-label">S</span></button>
-                <button class="option-card" data-field="tshirt_size" data-value="M" type="button"><span class="option-label">M</span></button>
-                <button class="option-card" data-field="tshirt_size" data-value="L" type="button"><span class="option-label">L</span></button>
-                <button class="option-card" data-field="tshirt_size" data-value="XL" type="button"><span class="option-label">XL</span></button>
-                <button class="option-card" data-field="tshirt_size" data-value="XXL" type="button"><span class="option-label">XXL</span></button>
               </div>
               <label class="field-group">Emergency contact <small>Recommended for a river activity</small><input id="f_emergency_name" placeholder="Contact name" /></label>
               <label class="field-group">Emergency phone <input id="f_emergency_phone" type="tel" placeholder="Contact phone" /></label>
@@ -286,6 +286,14 @@
           <label class="field-group">Destination <input name="location" /></label>
           <label class="field-group">Meeting point <input name="meetingPoint" /></label>
           <label class="field-group">Intro <textarea name="intro" rows="3"></textarea></label>
+          <fieldset class="lock-fieldset">
+            <legend>Locked edit sections</legend>
+            <label><input name="lockedFields" type="checkbox" value="contact" /> Contact</label>
+            <label><input name="lockedFields" type="checkbox" value="transport" /> Transport</label>
+            <label><input name="lockedFields" type="checkbox" value="kayak" /> Kayak</label>
+            <label><input name="lockedFields" type="checkbox" value="overnight" /> Overnight</label>
+            <label><input name="lockedFields" type="checkbox" value="food" /> Food</label>
+          </fieldset>
           <button class="nav-btn primary" type="submit">Save settings</button>
           <p class="form-status" id="settingsStatus" role="status"></p>
         </form>

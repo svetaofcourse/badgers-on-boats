@@ -11,6 +11,7 @@ const dataDir = join(root, "data");
 const stateFile = join(dataDir, "state.json");
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
+let stateMutationQueue = Promise.resolve();
 
 const defaultState = {
   trip: {
@@ -20,6 +21,7 @@ const defaultState = {
     meetingPoint: "Bolt HQ or pickup points",
     dateOptions: [],
     placeOptions: [],
+    lockedFields: [],
     adminPin: process.env.ADMIN_PIN || "kayak2026",
     intro:
       "Time for our yearly kayaking adventure. Register your availability, rides, kayak plans, food, gear, and extras."
@@ -57,6 +59,17 @@ async function writeState(state) {
   await writeFile(stateFile, JSON.stringify(state, null, 2));
 }
 
+async function mutateState(mutator) {
+  const run = stateMutationQueue.then(async () => {
+    const state = await readState();
+    const result = await mutator(state);
+    if (result?.write !== false) await writeState(state);
+    return result;
+  });
+  stateMutationQueue = run.catch(() => {});
+  return run;
+}
+
 async function readBody(req) {
   let body = "";
   for await (const chunk of req) body += chunk;
@@ -77,6 +90,14 @@ function cleanOptions(value) {
   return value.map((item) => String(item || "").trim().slice(0, 100)).filter(Boolean).slice(0, 12);
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 function normalizeState(state) {
   const oldDefaultTitle = !state.trip?.title || state.trip.title === "Badgers on Boats";
   const normalized = {
@@ -92,7 +113,8 @@ function normalizeState(state) {
       intro: oldDefaultTitle ? defaultState.trip.intro : state.trip?.intro || defaultState.trip.intro,
       adminPin: state.trip?.adminPin === "change-this-pin" ? defaultState.trip.adminPin : state.trip?.adminPin || defaultState.trip.adminPin,
       dateOptions: cleanOptions(state.trip?.dateOptions),
-      placeOptions: cleanOptions(state.trip?.placeOptions)
+      placeOptions: cleanOptions(state.trip?.placeOptions),
+      lockedFields: cleanOptions(state.trip?.lockedFields)
     },
     guests: Array.isArray(state.guests) ? state.guests.map(normalizeGuest) : []
   };
@@ -110,7 +132,7 @@ function normalizeGuest(guest) {
     ? guest.plusOnes
     : String(guest.plusOneName || "")
         .split(",")
-        .map((name) => ({ name: name.trim(), phone: "" }))
+        .map((name) => ({ name: name.trim(), phone: "", status: "not_bolt" }))
         .filter((item) => item.name);
   const canDrive = guest.canDrive || (guest.transportThere === "driving" ? "yes" : "no");
   const stay = guest.stayingOvernight || (guest.stayOvernight ? "yes" : "no");
@@ -119,6 +141,7 @@ function normalizeGuest(guest) {
     name: "",
     email: "",
     phone: "",
+    submitterStatus: guest.submitterStatus || "bolt",
     placePreference: "decide-later",
     dateAvailability,
     plusOnes,
@@ -142,7 +165,6 @@ function normalizeGuest(guest) {
     dietaryPref: guest.dietaryPref || "meat",
     wantsDrinks: guest.wantsDrinks || "no",
     wantsSauna: Boolean(guest.wantsSauna),
-    tshirtSize: guest.tshirtSize || "",
     canHelpWith: Array.isArray(guest.canHelpWith) ? guest.canHelpWith : [],
     emergencyContactName: guest.emergencyContactName || "",
     emergencyContactPhone: guest.emergencyContactPhone || "",
@@ -208,7 +230,8 @@ function cleanReferenceGuest(input, transportThere, transportBack) {
     ? (input.plus_ones || input.plusOnes)
         .map((item) => ({
           name: String(item.name || "").trim().slice(0, 80),
-          phone: String(item.phone || "").trim().slice(0, 40)
+          phone: String(item.phone || "").trim().slice(0, 40),
+          status: String(item.status || "not_bolt").slice(0, 40)
         }))
         .filter((item) => item.name)
         .slice(0, 8)
@@ -242,7 +265,7 @@ function cleanReferenceGuest(input, transportThere, transportBack) {
     allergies: String(input.allergies || "").trim().slice(0, 500),
     wantsDrinks: String(input.wants_drinks || input.wantsDrinks || "no").slice(0, 40),
     wantsSauna: boolValue(input.wants_sauna ?? input.wantsSauna),
-    tshirtSize: String(input.tshirt_size || input.tshirtSize || "").slice(0, 12),
+    submitterStatus: String(input.submitter_status || input.submitterStatus || "bolt").slice(0, 40),
     canHelpWith: Array.isArray(input.can_help_with || input.canHelpWith) ? (input.can_help_with || input.canHelpWith).map(String).slice(0, 12) : [],
     comments: String(input.comments || input.notes || "").trim().slice(0, 800),
     notes: String(input.comments || input.notes || "").trim().slice(0, 800),
@@ -273,6 +296,7 @@ function publicState(state) {
     id: guest.id,
     createdAt: guest.createdAt,
     name: guest.name,
+    submitterStatus: guest.submitterStatus,
     datePreference: guest.datePreference,
     placePreference: guest.placePreference,
     stayOvernight: Boolean(guest.stayOvernight),
@@ -301,7 +325,6 @@ function publicState(state) {
     dietaryPref: guest.dietaryPref,
     wantsDrinks: guest.wantsDrinks,
     wantsSauna: guest.wantsSauna,
-    tshirtSize: guest.tshirtSize,
     canHelpWith: guest.canHelpWith,
     food: guest.food,
     boat: guest.boat
@@ -314,6 +337,20 @@ function adminState(state) {
   return { trip, guests: state.guests };
 }
 
+function editableGuest(guest) {
+  const { id, createdAt, updatedAt, ...fields } = guest;
+  return { id, createdAt, updatedAt, ...fields };
+}
+
+function findDuplicateGuest(guests, guest, allowedId = "") {
+  const email = normalizeEmail(guest.email);
+  const phone = normalizePhone(guest.phone);
+  return guests.find((item) => {
+    if (allowedId && item.id === allowedId) return false;
+    return normalizeEmail(item.email) === email || normalizePhone(item.phone) === phone;
+  });
+}
+
 async function handleApi(req, res) {
   const state = await readState();
 
@@ -322,24 +359,48 @@ async function handleApi(req, res) {
     return;
   }
 
+  if (req.method === "POST" && req.url === "/api/guests/lookup") {
+    const body = await readBody(req);
+    const email = normalizeEmail(body.email);
+    const phone = normalizePhone(body.phone);
+    const guest = state.guests.find((item) => normalizeEmail(item.email) === email && normalizePhone(item.phone) === phone);
+    if (!guest) {
+      sendJson(res, 404, { error: "No registration found for that email and phone." });
+      return;
+    }
+    sendJson(res, 200, { guest: editableGuest(guest) });
+    return;
+  }
+
   if (req.method === "POST" && req.url === "/api/guests") {
-    const guest = cleanGuest(await readBody(req));
+    const body = await readBody(req);
+    const guest = cleanGuest(body);
     if (!guest.name || !guest.email || !guest.phone) {
       sendJson(res, 400, { error: "Name, email, and phone are required." });
       return;
     }
-    const existing = state.guests.find((item) => item.email?.toLowerCase() === guest.email.toLowerCase());
-    if (existing) {
-      Object.assign(existing, guest, { updatedAt: new Date().toISOString() });
-    } else {
-      state.guests.push({
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-        ...guest
-      });
-    }
-    await writeState(state);
-    sendJson(res, existing ? 200 : 201, publicState(state));
+    const editId = String(body.edit_id || body.editId || "");
+    const result = await mutateState(async (state) => {
+      const existing = editId ? state.guests.find((item) => item.id === editId) : null;
+      if (editId && !existing) {
+        return { status: 404, data: { error: "Registration not found. Please use Edit my response again." }, write: false };
+      }
+      const duplicate = findDuplicateGuest(state.guests, guest, editId);
+      if (duplicate) {
+        return { status: 409, data: { error: "A registration with this email or phone already exists. Use Edit my response." }, write: false };
+      }
+      if (existing) {
+        Object.assign(existing, guest, { updatedAt: new Date().toISOString() });
+      } else {
+        state.guests.push({
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          ...guest
+        });
+      }
+      return { status: existing ? 200 : 201, data: publicState(state) };
+    });
+    sendJson(res, result.status, result.data);
     return;
   }
 
@@ -364,35 +425,42 @@ async function handleApi(req, res) {
 
   if (req.method === "PUT" && req.url === "/api/admin/settings") {
     const body = await readBody(req);
-    state.trip = {
-      ...state.trip,
-      ...body.trip,
-      dateOptions: cleanOptions(body.trip?.dateOptions),
-      placeOptions: cleanOptions(body.trip?.placeOptions),
-      adminPin: state.trip.adminPin
-    };
-    await writeState(state);
-    sendJson(res, 200, adminState(state));
+    const result = await mutateState(async (state) => {
+      state.trip = {
+        ...state.trip,
+        ...body.trip,
+        dateOptions: cleanOptions(body.trip?.dateOptions),
+        placeOptions: cleanOptions(body.trip?.placeOptions),
+        lockedFields: cleanOptions(body.trip?.lockedFields),
+        adminPin: state.trip.adminPin
+      };
+      return { status: 200, data: adminState(state) };
+    });
+    sendJson(res, result.status, result.data);
     return;
   }
 
   const guestMatch = req.url.match(/^\/api\/admin\/guests\/([^/]+)$/);
   if (guestMatch && req.method === "PATCH") {
-    const guest = state.guests.find((item) => item.id === guestMatch[1]);
-    if (!guest) {
-      sendJson(res, 404, { error: "Guest not found." });
-      return;
-    }
-    Object.assign(guest, cleanGuest(await readBody(req)));
-    await writeState(state);
-    sendJson(res, 200, adminState(state));
+    const cleaned = cleanGuest(await readBody(req));
+    const result = await mutateState(async (state) => {
+      const guest = state.guests.find((item) => item.id === guestMatch[1]);
+      if (!guest) return { status: 404, data: { error: "Guest not found." }, write: false };
+      const duplicate = findDuplicateGuest(state.guests, cleaned, guest.id);
+      if (duplicate) return { status: 409, data: { error: "Another registration already uses that email or phone." }, write: false };
+      Object.assign(guest, cleaned, { updatedAt: new Date().toISOString() });
+      return { status: 200, data: adminState(state) };
+    });
+    sendJson(res, result.status, result.data);
     return;
   }
 
   if (guestMatch && req.method === "DELETE") {
-    state.guests = state.guests.filter((item) => item.id !== guestMatch[1]);
-    await writeState(state);
-    sendJson(res, 200, adminState(state));
+    const result = await mutateState(async (state) => {
+      state.guests = state.guests.filter((item) => item.id !== guestMatch[1]);
+      return { status: 200, data: adminState(state) };
+    });
+    sendJson(res, result.status, result.data);
     return;
   }
 
