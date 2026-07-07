@@ -161,6 +161,7 @@ function selectOption(card) {
   if (field === "has_plus_ones") {
     toggle("plusOneSection", value === "yes");
     if (value === "yes" && !$("#plusOneList").children.length) addPlusOne();
+    syncPlusOneInputs();
   }
   if (field === "can_drive") toggle("driverSection", value === "yes" || value === "bolt_drive");
   if (field === "staying_overnight") toggle("overnightSection", value === "yes" || value === "maybe");
@@ -176,6 +177,13 @@ function setOption(field, value) {
 
 function toggle(id, show) {
   $(`#${id}`)?.classList.toggle("show", show);
+}
+
+function syncPlusOneInputs() {
+  const disabled = formState.options.has_plus_ones !== "yes";
+  $$(".plus-one-card input, .plus-one-card select").forEach((field) => {
+    field.disabled = disabled;
+  });
 }
 
 function addPlusOne() {
@@ -196,6 +204,7 @@ function addPlusOne() {
       <option value="not_bolt" selected>Not Bolt</option>
     </select></label>`;
   $("#plusOneList").appendChild(card);
+  syncPlusOneInputs();
 }
 
 function toggleHelp(chip) {
@@ -211,13 +220,16 @@ function toggleHelp(chip) {
 function collectData() {
   const startingFrom = $("#f_starting_from").value;
   const customStart = $("#f_starting_from_custom").value.trim();
-  const plusOnes = $$(".plus-one-card")
-    .map((card) => ({
-      name: card.querySelector(".po-name").value.trim(),
-      phone: card.querySelector(".po-phone").value.trim(),
-      status: card.querySelector(".po-status").value
-    }))
-    .filter((item) => item.name);
+  const plusOnes =
+    formState.options.has_plus_ones === "yes"
+      ? $$(".plus-one-card")
+          .map((card) => ({
+            name: card.querySelector(".po-name").value.trim(),
+            phone: card.querySelector(".po-phone").value.trim(),
+            status: card.querySelector(".po-status").value
+          }))
+          .filter((item) => item.name)
+      : [];
 
   return {
     edit_id: editingGuestId,
