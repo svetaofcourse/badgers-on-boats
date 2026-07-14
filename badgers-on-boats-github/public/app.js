@@ -31,6 +31,13 @@ const formState = {
   helpWith: []
 };
 
+let profileGuest = null;
+let profilePlusOneCount = 0;
+const profileState = {
+  options: {},
+  helpWith: []
+};
+
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
@@ -594,6 +601,30 @@ function renderParticipantDatalist() {
   $("#participantList").innerHTML = state.guests.map((guest) => `<option value="${escapeHtml(guest.name)}"></option>`).join("");
   $("#f_preferred_car_buddy").innerHTML = options;
   $("#f_kayak_partner").innerHTML = options;
+  const buddy = $("#p_preferred_car_buddy");
+  const partner = $("#p_kayak_partner");
+  if (buddy) {
+    const current = buddy.value;
+    buddy.innerHTML = options;
+    buddy.value = current;
+  }
+  if (partner) {
+    const current = partner.value;
+    partner.innerHTML = options;
+    partner.value = current;
+  }
+  populateProfileSelect();
+}
+
+function populateProfileSelect() {
+  const select = $("#profileGuestSelect");
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = [
+    `<option value="">Select your name...</option>`,
+    ...state.guests.map((guest) => `<option value="${escapeHtml(guest.id)}">${escapeHtml(guest.name)}</option>`)
+  ].join("");
+  if (current && state.guests.some((guest) => guest.id === current)) select.value = current;
 }
 
 function goToStep(step) {
@@ -952,6 +983,273 @@ function applyFieldLocks() {
   });
 }
 
+function profileSelectOption(card) {
+  const field = card.dataset.field;
+  const value = card.dataset.value;
+  card.parentElement.querySelectorAll(".option-card").forEach((item) => item.classList.remove("selected"));
+  card.classList.add("selected");
+  profileState.options[field] = value;
+
+  if (field === "has_plus_ones") {
+    profileToggle("p_plusOneSection", value === "yes");
+    if (value === "yes" && !$("#p_plusOneList").children.length) addProfilePlusOne();
+    syncProfilePlusOneInputs();
+  }
+  if (field === "can_drive") profileToggle("p_driverSection", value === "yes" || value === "bolt_drive");
+  if (field === "staying_overnight") profileToggle("p_overnightSection", value === "yes" || value === "maybe");
+  if (field === "has_tent") profileToggle("p_tentShareSection", value === "share");
+  if (field === "eating_group_food") profileToggle("p_foodSection", value === "yes");
+}
+
+function profileSetOption(field, value) {
+  if (!value) return;
+  const option = document.querySelector(`#profile [data-field="${field}"][data-value="${value}"]`);
+  if (option) profileSelectOption(option);
+}
+
+function profileToggle(id, show) {
+  $(`#${id}`)?.classList.toggle("show", show);
+}
+
+function syncProfilePlusOneInputs() {
+  const disabled = profileState.options.has_plus_ones !== "yes";
+  $$("#p_plusOneList input, #p_plusOneList select").forEach((field) => {
+    field.disabled = disabled;
+  });
+}
+
+function addProfilePlusOne() {
+  profilePlusOneCount += 1;
+  const id = `profile_plus_one_${profilePlusOneCount}`;
+  const card = document.createElement("div");
+  card.className = "plus-one-card";
+  card.id = id;
+  card.innerHTML = `<div class="plus-one-header">
+      <h4>+1 #${profilePlusOneCount}</h4>
+      <button class="remove-btn" data-remove-profile-plus-one="${id}" type="button" aria-label="Remove plus one">×</button>
+    </div>
+    <label class="field-group">Name * <input class="po-name" required placeholder="Full name" /></label>
+    <label class="field-group">Phone <small>Optional, if organizers should add them to the group</small><input class="po-phone" type="tel" placeholder="+372..." /></label>
+    <label class="field-group">Bolt connection <select class="po-status">
+      <option value="bolt">Bolt</option>
+      <option value="ex_bolt">Ex-Bolt</option>
+      <option value="not_bolt" selected>Not Bolt</option>
+    </select></label>`;
+  $("#p_plusOneList").appendChild(card);
+  syncProfilePlusOneInputs();
+  return card;
+}
+
+function toggleProfileHelp(chip) {
+  const value = chip.dataset.help;
+  chip.classList.toggle("selected");
+  if (chip.classList.contains("selected")) {
+    if (!profileState.helpWith.includes(value)) profileState.helpWith.push(value);
+  } else {
+    profileState.helpWith = profileState.helpWith.filter((item) => item !== value);
+  }
+}
+
+function resetProfileFields() {
+  profileState.options = {};
+  profileState.helpWith = [];
+  profilePlusOneCount = 0;
+  $("#p_plusOneList").innerHTML = "";
+  $$("#profile .option-card.selected").forEach((item) => item.classList.remove("selected"));
+  $$("#profile .chip.selected").forEach((item) => item.classList.remove("selected"));
+  $$("#profile .conditional").forEach((item) => {
+    if (item.id !== "profileVerify") item.classList.remove("show");
+  });
+  ["p_total_seats", "p_starting_from", "p_starting_from_custom", "p_kayak_type_notes", "p_tent_share_spots", "p_tent_notes", "p_allergies", "p_emergency_name", "p_emergency_phone", "p_comments"].forEach((id) => {
+    const el = $(`#${id}`);
+    if (el) el.value = "";
+  });
+}
+
+function loadProfile(guest) {
+  profileGuest = guest;
+  resetProfileFields();
+  $("#p_name").textContent = guest.name || "";
+  $("#p_email").textContent = guest.email || "";
+  $("#p_phone").textContent = guest.phone || "";
+  profileSetOption("submitter_status", guest.submitterStatus || "bolt");
+
+  profileSetOption("has_plus_ones", guest.plusOnes?.length ? "yes" : "no");
+  if (guest.plusOnes?.length) {
+    $("#p_plusOneList").innerHTML = "";
+    profilePlusOneCount = 0;
+    guest.plusOnes.forEach((plusOne) => {
+      const card = addProfilePlusOne();
+      card.querySelector(".po-name").value = plusOne.name || "";
+      card.querySelector(".po-phone").value = plusOne.phone || "";
+      card.querySelector(".po-status").value = plusOne.status || "not_bolt";
+    });
+  }
+
+  profileSetOption("can_drive", guest.canDrive || "no");
+  $("#p_total_seats").value = guest.totalSeats || "";
+  $("#p_starting_from").value = ["Bolt HQ", "Tartu"].includes(guest.startingFrom) ? guest.startingFrom : guest.startingFrom ? "other" : "";
+  $("#p_starting_from_custom").value = $("#p_starting_from").value === "other" ? guest.startingFrom : "";
+  profileToggle("p_customStartSection", $("#p_starting_from").value === "other");
+  $("#p_preferred_car_buddy").value = guest.preferredCarBuddy || "";
+  $("#p_kayak_partner").value = guest.kayakPartnerPref || "";
+  $("#p_kayak_type").value = guest.kayakTypePref || "any";
+  $("#p_kayak_type_notes").value = guest.kayakTypeNotes || "";
+  profileSetOption("kayak_experience", guest.kayakExperience || "intermediate");
+  profileSetOption("staying_overnight", guest.stayingOvernight || "no");
+  profileSetOption("has_tent", guest.hasTent || "");
+  $("#p_tent_share_spots").value = guest.tentShareSpots || "";
+  $("#p_tent_notes").value = guest.tentNotes || "";
+  profileSetOption("has_sleeping_bag", guest.hasSleepingBag || "");
+  profileSetOption("eating_group_food", guest.eatingGroupFood === false ? "no" : "yes");
+  profileSetOption("dietary_pref", guest.dietaryPref || "meat");
+  $("#p_allergies").value = guest.allergies || "";
+  profileSetOption("wants_drinks", guest.wantsDrinks || "no");
+  profileSetOption("wants_sauna", guest.wantsSauna ? "yes" : "no");
+  profileState.helpWith = Array.isArray(guest.canHelpWith) ? [...guest.canHelpWith] : [];
+  $$("#p_helpChips .chip[data-help]").forEach((chip) => chip.classList.toggle("selected", profileState.helpWith.includes(chip.dataset.help)));
+  $("#p_emergency_name").value = guest.emergencyContactName || "";
+  $("#p_emergency_phone").value = guest.emergencyContactPhone || "";
+  $("#p_comments").value = guest.comments || guest.notes || "";
+  applyProfileFieldLocks();
+  $("#profileFields").classList.remove("hidden");
+  $("#profileSaveStatus").textContent = "";
+}
+
+function applyProfileFieldLocks() {
+  const locked = state.trip.lockedFields || [];
+  const groups = {
+    contact: ['#profile [data-field="submitter_status"]'],
+    transport: ['#profile [data-field="can_drive"]', "#p_total_seats", "#p_starting_from", "#p_starting_from_custom", "#p_preferred_car_buddy"],
+    kayak: ["#p_kayak_partner", "#p_kayak_type", "#p_kayak_type_notes", '#profile [data-field="kayak_experience"]'],
+    overnight: ['#profile [data-field="staying_overnight"]', '#profile [data-field="has_tent"]', "#p_tent_share_spots", "#p_tent_notes", '#profile [data-field="has_sleeping_bag"]'],
+    food: ['#profile [data-field="eating_group_food"]', '#profile [data-field="dietary_pref"]', "#p_allergies", '#profile [data-field="wants_drinks"]', '#profile [data-field="wants_sauna"]']
+  };
+  Object.entries(groups).forEach(([group, selectors]) => {
+    const disabled = locked.includes(group);
+    selectors.forEach((selector) => {
+      $$(selector).forEach((element) => {
+        element.disabled = disabled;
+        element.classList.toggle("locked", disabled);
+      });
+    });
+  });
+}
+
+function collectProfileData() {
+  const guest = profileGuest;
+  const startingFrom = $("#p_starting_from").value;
+  const customStart = $("#p_starting_from_custom").value.trim();
+  const plusOnes =
+    profileState.options.has_plus_ones === "yes"
+      ? $$("#p_plusOneList .plus-one-card")
+          .map((card) => ({
+            name: card.querySelector(".po-name").value.trim(),
+            phone: card.querySelector(".po-phone").value.trim(),
+            status: card.querySelector(".po-status").value
+          }))
+          .filter((item) => item.name)
+      : [];
+
+  return {
+    edit_id: guest.id,
+    name: guest.name,
+    email: guest.email,
+    phone: guest.phone,
+    submitter_status: profileState.options.submitter_status || "bolt",
+    plus_ones: plusOnes,
+    can_drive: profileState.options.can_drive || "no",
+    total_seats: $("#p_total_seats").value || null,
+    starting_from: startingFrom === "other" ? customStart : startingFrom,
+    preferred_car_buddy: $("#p_preferred_car_buddy").value.trim(),
+    kayak_partner_pref: $("#p_kayak_partner").value.trim(),
+    kayak_type_pref: $("#p_kayak_type").value,
+    kayak_type_notes: $("#p_kayak_type_notes").value.trim(),
+    kayak_experience: profileState.options.kayak_experience || "",
+    staying_overnight: profileState.options.staying_overnight || "no",
+    has_tent: profileState.options.has_tent || "",
+    tent_share_spots: $("#p_tent_share_spots").value || null,
+    tent_notes: $("#p_tent_notes").value.trim(),
+    has_sleeping_bag: profileState.options.has_sleeping_bag || "",
+    eating_group_food: profileState.options.eating_group_food !== "no",
+    dietary_pref: profileState.options.dietary_pref || "meat",
+    allergies: $("#p_allergies").value.trim(),
+    wants_drinks: profileState.options.wants_drinks || "no",
+    wants_sauna: profileState.options.wants_sauna === "yes",
+    can_help_with: profileState.helpWith,
+    comments: $("#p_comments").value.trim(),
+    emergency_contact_name: $("#p_emergency_name").value.trim(),
+    emergency_contact_phone: $("#p_emergency_phone").value.trim()
+  };
+}
+
+async function saveProfile() {
+  if (!profileGuest) return;
+  const button = $("#profileSaveBtn");
+  const status = $("#profileSaveStatus");
+  if (profileState.options.has_plus_ones === "yes") {
+    const cards = $$("#p_plusOneList .plus-one-card");
+    const emptyCard = cards.find((card) => !card.querySelector(".po-name").value.trim());
+    if (!cards.length || emptyCard) {
+      status.textContent = 'Add a name for each +1, or switch to "Just me".';
+      emptyCard?.querySelector(".po-name")?.reportValidity();
+      return;
+    }
+  }
+  const data = collectProfileData();
+  try {
+    button.disabled = true;
+    button.textContent = "Saving...";
+    status.textContent = "";
+    state = await saveGuest(data, false);
+    renderTripView();
+    renderTransport();
+    status.textContent = "Saved.";
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Save changes";
+    applyProfileFieldLocks();
+  }
+}
+
+function onProfileSelectChange() {
+  profileGuest = null;
+  $("#profileFields").classList.add("hidden");
+  $("#profileVerifyStatus").textContent = "";
+  $("#p_verify_email").value = "";
+  $("#p_verify_phone").value = "";
+  profileToggle("profileVerify", Boolean($("#profileGuestSelect").value));
+}
+
+async function verifyProfile() {
+  const id = $("#profileGuestSelect").value;
+  const status = $("#profileVerifyStatus");
+  if (!id) {
+    status.textContent = "Pick your name first.";
+    return;
+  }
+  const emailEl = $("#p_verify_email");
+  const phoneEl = $("#p_verify_phone");
+  if (!emailEl.value.trim() || !phoneEl.value.trim()) {
+    status.textContent = "Enter the email and phone you registered with.";
+    return;
+  }
+  try {
+    status.textContent = "Checking...";
+    const guest = await lookupGuest(emailEl.value, phoneEl.value);
+    if (guest.id !== id) {
+      status.textContent = "That email and phone don't match the selected name.";
+      return;
+    }
+    status.textContent = "";
+    loadProfile(guest);
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+
 function renderGuestList() {
   const list = $("#guestList");
   if (!state.guests.length) {
@@ -1308,6 +1606,7 @@ $("#anotherResponseButton").addEventListener("click", resetFormFlow);
 $("#addPlusOneButton").addEventListener("click", addPlusOne);
 
 document.addEventListener("click", (event) => {
+  if (event.target.closest("#profile")) return;
   const option = event.target.closest(".option-card");
   if (option) selectOption(option);
   const chip = event.target.closest(".chip[data-help]");
@@ -1316,6 +1615,29 @@ document.addEventListener("click", (event) => {
   if (remove) $(`#${remove.dataset.removePlusOne}`)?.remove();
   const review = event.target.closest("[data-review-step]");
   if (review) goToStep(Number(review.dataset.reviewStep));
+});
+
+$("#profile").addEventListener("click", (event) => {
+  const option = event.target.closest(".option-card");
+  if (option && !option.disabled) {
+    profileSelectOption(option);
+    return;
+  }
+  const chip = event.target.closest(".chip[data-help]");
+  if (chip && !chip.disabled) {
+    toggleProfileHelp(chip);
+    return;
+  }
+  const remove = event.target.closest("[data-remove-profile-plus-one]");
+  if (remove) $(`#${remove.dataset.removeProfilePlusOne}`)?.remove();
+});
+
+$("#profileGuestSelect").addEventListener("change", onProfileSelectChange);
+$("#profileVerifyButton").addEventListener("click", verifyProfile);
+$("#profileSaveBtn").addEventListener("click", saveProfile);
+$("#p_addPlusOneButton").addEventListener("click", addProfilePlusOne);
+$("#p_starting_from").addEventListener("change", (event) => {
+  profileToggle("p_customStartSection", event.target.value === "other");
 });
 
 document.addEventListener("keydown", (event) => {
@@ -1344,21 +1666,6 @@ $("#adminLogin").addEventListener("submit", async (event) => {
     event.currentTarget.elements.pin.placeholder = "Wrong key";
   }
 });
-
-$("#editLookupButton").addEventListener("click", async () => {
-  const email = $("#edit_email");
-  const phone = $("#edit_phone");
-  if (!email.reportValidity() || !phone.reportValidity()) return;
-  try {
-    $("#editLookupStatus").textContent = "Looking up...";
-    const guest = await lookupGuest(email.value, phone.value);
-    $("#editLookupStatus").textContent = "";
-    loadGuestForEdit(guest);
-  } catch (error) {
-    $("#editLookupStatus").textContent = error.message;
-  }
-});
-
 
 $("#settingsForm").addEventListener("submit", async (event) => {
   event.preventDefault();

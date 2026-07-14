@@ -286,25 +286,6 @@ h3 {
   margin-top: 12px;
 }
 
-.edit-lookup {
-  display: grid;
-  gap: 12px;
-  width: min(420px, 100%);
-  margin: 26px auto 0;
-  padding-top: 22px;
-  border-top: 1px solid var(--bolt-gray-200);
-  text-align: left;
-}
-
-.edit-lookup h3 {
-  margin-bottom: 0;
-  text-align: center;
-}
-
-.edit-lookup .field-group {
-  margin-bottom: 0;
-}
-
 .calendar-link {
   display: inline-flex;
   align-items: center;
@@ -1141,6 +1122,100 @@ textarea:disabled {
     font-weight: 800;
     text-transform: uppercase;
   }
+}
+
+/* My profile */
+.text-link.inline {
+  display: inline;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.profile-body {
+  width: min(640px, 100%);
+}
+
+.profile-picker {
+  margin-bottom: 18px;
+}
+
+.profile-picker .field-group {
+  margin-bottom: 0;
+}
+
+.profile-verify-hint {
+  margin: 16px 0 12px;
+}
+
+.profile-section {
+  margin-bottom: 18px;
+}
+
+.profile-section h3 {
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bolt-gray-100);
+}
+
+.profile-section .field-group:last-of-type,
+.profile-section .options-grid:last-child {
+  margin-bottom: 0;
+}
+
+.profile-readonly {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--bolt-gray-200);
+  border-radius: var(--radius-md);
+  background: var(--bolt-gray-200);
+}
+
+.profile-readonly div {
+  display: grid;
+  gap: 3px;
+  background: var(--bolt-white);
+  padding: 12px 16px;
+}
+
+.profile-readonly span {
+  color: var(--bolt-gray-500);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.profile-readonly strong {
+  color: var(--bolt-dark);
+  font-size: 0.98rem;
+  overflow-wrap: anywhere;
+}
+
+.profile-locked-note {
+  color: var(--bolt-gray-400);
+  font-size: 0.82rem;
+  margin: 0 0 20px;
+}
+
+.profile-save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--bolt-gray-200);
+  backdrop-filter: blur(12px);
+}
+
+.profile-save-bar .form-status {
+  margin-right: auto;
 }
 
 /* Transport */

@@ -13,6 +13,7 @@
         <nav class="header-links" aria-label="Main navigation">
           <a href="#guests">Guests</a>
           <a href="#transport">Transport</a>
+          <a href="#profile">My profile</a>
           <a href="#admin">Admin</a>
         </nav>
         <div class="step-counter" id="stepCounter"></div>
@@ -47,13 +48,7 @@
               <a class="calendar-link" id="calendarLink" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Bolt%20Kayak%20Trip%202026&dates=20260725%2F20260727&details=Placeholder%20for%20the%20Bolt%20Kayak%20Trip%202026.%20Trip%20details%20and%20final%20meeting%20point%20will%20be%20shared%20closer%20to%20the%20date.&location=To%20be%20decided" target="_blank" rel="noreferrer">Add July 25-26 to Google Calendar</a>
               <p class="welcome-note">Fill out this form to register. It takes about 3 minutes.</p>
               <button class="start-btn" type="button" id="startButton">Let's go</button>
-              <div class="edit-lookup" id="editLookupForm">
-                <h3>Edit your response</h3>
-                <label class="field-group">Email <input id="edit_email" type="email" autocomplete="email" required placeholder="boaty.mc.boat@kayak.com" /></label>
-                <label class="field-group">Phone number <input id="edit_phone" autocomplete="tel" required placeholder="+372 5555 1234" /></label>
-                <button class="nav-btn secondary" id="editLookupButton" type="button">Find my response</button>
-                <p class="form-status" id="editLookupStatus" role="status"></p>
-              </div>
+              <p class="welcome-note">Already registered? Update your answers anytime from <a class="text-link inline" href="#profile">My profile</a>.</p>
             </div>
           </section>
 
@@ -249,7 +244,7 @@
       <div class="success-content">
         <div class="success-icon">✓</div>
         <h2>You're registered</h2>
-        <p>Your trip info has been saved. You can submit again with the same email later to update your answers.</p>
+        <p>Your trip info has been saved. To update your answers later, head to <a class="text-link inline" href="#profile">My profile</a>.</p>
         <button class="start-btn" id="anotherResponseButton" type="button">Add another response</button>
       </div>
     </section>
@@ -280,6 +275,186 @@
       <div id="transportSummary" class="transport-summary"></div>
       <div id="transportCars" class="transport-cars"></div>
       <div id="transportUnassigned" class="transport-unassigned"></div>
+    </section>
+
+    <section class="public-section registration-side-panel" id="profile">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Your details</p>
+          <h2>My profile</h2>
+        </div>
+        <a class="text-link" href="#signup">Back to signup</a>
+      </div>
+
+      <div class="profile-body">
+        <div class="card profile-picker">
+          <label class="field-group">Who are you?
+            <select id="profileGuestSelect">
+              <option value="">Select your name...</option>
+            </select>
+          </label>
+          <div class="conditional" id="profileVerify">
+            <p class="step-subtitle profile-verify-hint">Confirm it's you with the email and phone number you registered with.</p>
+            <div class="form-row">
+              <label class="field-group">Email <input id="p_verify_email" type="email" autocomplete="email" placeholder="name@example.com" /></label>
+              <label class="field-group">Phone number <input id="p_verify_phone" autocomplete="tel" placeholder="+372 5555 1234" /></label>
+            </div>
+            <button class="nav-btn primary" id="profileVerifyButton" type="button">View my profile</button>
+            <p class="form-status" id="profileVerifyStatus" role="status"></p>
+          </div>
+        </div>
+
+        <div id="profileFields" class="hidden">
+          <div class="card profile-section">
+            <h3>About you</h3>
+            <div class="profile-readonly">
+              <div><span>Full name</span><strong id="p_name"></strong></div>
+              <div><span>Email</span><strong id="p_email"></strong></div>
+              <div><span>Phone</span><strong id="p_phone"></strong></div>
+            </div>
+            <p class="profile-locked-note">Name, email and phone can't be changed here. Ask an organizer if they need fixing.</p>
+            <label class="field-group">Bolt connection</label>
+            <div class="options-grid cols-3">
+              <button class="option-card" data-field="submitter_status" data-value="bolt" type="button"><span class="option-label">Bolt</span></button>
+              <button class="option-card" data-field="submitter_status" data-value="ex_bolt" type="button"><span class="option-label">Ex-Bolt</span></button>
+              <button class="option-card" data-field="submitter_status" data-value="not_bolt" type="button"><span class="option-label">Not Bolt</span></button>
+            </div>
+          </div>
+
+          <div class="card profile-section">
+            <h3>Your +1s</h3>
+            <div class="options-grid cols-2">
+              <button class="option-card" data-field="has_plus_ones" data-value="yes" type="button"><span class="option-icon">👥</span><span class="option-label">Yes</span></button>
+              <button class="option-card" data-field="has_plus_ones" data-value="no" type="button"><span class="option-icon">👋</span><span class="option-label">Just me</span></button>
+            </div>
+            <div class="conditional" id="p_plusOneSection">
+              <div id="p_plusOneList"></div>
+              <button class="add-btn" id="p_addPlusOneButton" type="button">+ Add a +1</button>
+            </div>
+          </div>
+
+          <div class="card profile-section">
+            <h3>Getting there</h3>
+            <label class="field-group">Can you drive?</label>
+            <div class="options-grid cols-3">
+              <button class="option-card" data-field="can_drive" data-value="yes" type="button"><span class="option-icon">🚗</span><span class="option-label">Yes, my car</span></button>
+              <button class="option-card" data-field="can_drive" data-value="bolt_drive" type="button"><span class="option-icon">⚡</span><span class="option-label">Bolt Drive</span></button>
+              <button class="option-card" data-field="can_drive" data-value="no" type="button"><span class="option-icon">🪑</span><span class="option-label">Passenger</span></button>
+            </div>
+            <div class="conditional" id="p_driverSection">
+              <label class="field-group">Total seats including you <small>If 5-seater with small trunk, mark 4</small><input id="p_total_seats" type="number" min="2" max="8" placeholder="4" /></label>
+            </div>
+            <label class="field-group">Where are you starting from?
+              <select id="p_starting_from">
+                <option value="">Select...</option>
+                <option value="Bolt HQ">Bolt HQ</option>
+                <option value="Tartu">Tartu</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <div class="conditional" id="p_customStartSection">
+              <label class="field-group">Pickup address <input id="p_starting_from_custom" placeholder="Your pickup address" /></label>
+            </div>
+            <label class="field-group">Prefer to ride with someone? <small>Optional</small><select id="p_preferred_car_buddy"></select></label>
+          </div>
+
+          <div class="card profile-section">
+            <h3>Kayak time</h3>
+            <label class="field-group">Preferred kayak partner <small>Must be mutual. Leave blank for random.</small><select id="p_kayak_partner"></select></label>
+            <label class="field-group">Preferred kayak type
+              <select id="p_kayak_type">
+                <option value="any">Don't care</option>
+                <option value="two_person">2-person kayak</option>
+                <option value="two_person_canoe">2-person canoe</option>
+              </select>
+            </label>
+            <label class="field-group">Kayak notes <small>Optional: comfort, stability, storage, or other preferences</small><input id="p_kayak_type_notes" placeholder="e.g. would prefer canoe if available" /></label>
+            <label class="field-group">Kayaking experience</label>
+            <div class="options-grid cols-3">
+              <button class="option-card" data-field="kayak_experience" data-value="beginner" type="button"><span class="option-icon">🐘</span><span class="option-label">Beginner</span><span class="option-desc">First time or rarely</span></button>
+              <button class="option-card" data-field="kayak_experience" data-value="intermediate" type="button"><span class="option-icon">🌊</span><span class="option-label">Some experience</span><span class="option-desc">Done it a few times</span></button>
+              <button class="option-card" data-field="kayak_experience" data-value="experienced" type="button"><span class="option-icon">🏆</span><span class="option-label">Experienced</span><span class="option-desc">Regular paddler</span></button>
+            </div>
+          </div>
+
+          <div class="card profile-section">
+            <h3>Staying the night?</h3>
+            <div class="options-grid cols-3">
+              <button class="option-card" data-field="staying_overnight" data-value="yes" type="button"><span class="option-icon">⛺</span><span class="option-label">Yes</span><span class="option-desc">Full experience</span></button>
+              <button class="option-card" data-field="staying_overnight" data-value="maybe" type="button"><span class="option-icon">🤔</span><span class="option-label">Maybe</span><span class="option-desc">Deciding later</span></button>
+              <button class="option-card" data-field="staying_overnight" data-value="no" type="button"><span class="option-icon">🛶</span><span class="option-label">Day trip only</span></button>
+            </div>
+            <div class="conditional" id="p_overnightSection">
+              <label class="field-group">Do you have a tent?</label>
+              <div class="options-grid cols-3">
+                <button class="option-card" data-field="has_tent" data-value="yes" type="button"><span class="option-label">Yes, bringing mine</span></button>
+                <button class="option-card" data-field="has_tent" data-value="share" type="button"><span class="option-label">Can share</span></button>
+                <button class="option-card" data-field="has_tent" data-value="no" type="button"><span class="option-label">No, need one</span></button>
+              </div>
+              <div class="conditional" id="p_tentShareSection">
+                <div class="form-row">
+                  <label class="field-group">Free tent spots <small>How many people besides you can sleep there?</small><input id="p_tent_share_spots" type="number" min="1" max="5" placeholder="1" /></label>
+                  <label class="field-group">Tent notes <small>Optional</small><input id="p_tent_notes" placeholder="e.g. best for 1 extra person" /></label>
+                </div>
+              </div>
+              <label class="field-group">Sleeping bag and mat?</label>
+              <div class="options-grid cols-2">
+                <button class="option-card" data-field="has_sleeping_bag" data-value="yes" type="button"><span class="option-label">Yes, have them</span></button>
+                <button class="option-card" data-field="has_sleeping_bag" data-value="no" type="button"><span class="option-label">No, need them</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card profile-section">
+            <h3>Food and drinks</h3>
+            <label class="field-group">Eating the group food?</label>
+            <div class="options-grid cols-2">
+              <button class="option-card" data-field="eating_group_food" data-value="yes" type="button"><span class="option-icon">🍖</span><span class="option-label">Yes please</span></button>
+              <button class="option-card" data-field="eating_group_food" data-value="no" type="button"><span class="option-icon">🥪</span><span class="option-label">Bringing my own</span></button>
+            </div>
+            <div class="conditional" id="p_foodSection">
+              <label class="field-group">Dietary preference</label>
+              <div class="options-grid cols-3">
+                <button class="option-card" data-field="dietary_pref" data-value="meat" type="button"><span class="option-icon">🥩</span><span class="option-label">Meat</span></button>
+                <button class="option-card" data-field="dietary_pref" data-value="vegetarian" type="button"><span class="option-icon">🥬</span><span class="option-label">Vegetarian</span></button>
+                <button class="option-card" data-field="dietary_pref" data-value="vegan" type="button"><span class="option-icon">🌿</span><span class="option-label">Vegan</span></button>
+              </div>
+              <label class="field-group">Any allergies? <small>Leave blank if none</small><input id="p_allergies" placeholder="e.g. nuts, shellfish, gluten" /></label>
+            </div>
+            <label class="field-group">Drinks?</label>
+            <div class="options-grid cols-3">
+              <button class="option-card" data-field="wants_drinks" data-value="yes" type="button"><span class="option-icon">🍺</span><span class="option-label">Yes</span><span class="option-desc">Shared cost</span></button>
+              <button class="option-card" data-field="wants_drinks" data-value="soft" type="button"><span class="option-icon">🥤</span><span class="option-label">Soft only</span><span class="option-desc">Shared cost</span></button>
+              <button class="option-card" data-field="wants_drinks" data-value="no" type="button"><span class="option-icon">💧</span><span class="option-label">No thanks</span><span class="option-desc">Will bring all my own</span></button>
+            </div>
+            <label class="field-group">Sauna?</label>
+            <div class="options-grid cols-2">
+              <button class="option-card" data-field="wants_sauna" data-value="yes" type="button"><span class="option-icon">🧖</span><span class="option-label">Yes</span></button>
+              <button class="option-card" data-field="wants_sauna" data-value="no" type="button"><span class="option-icon">👋</span><span class="option-label">No thanks</span></button>
+            </div>
+          </div>
+
+          <div class="card profile-section">
+            <h3>Extras</h3>
+            <label class="field-group">Can you help with anything? <small>Pick as many as you want</small></label>
+            <div class="chips" id="p_helpChips">
+              <button class="chip" data-help="shopping" type="button">🛒 Food shopping</button>
+              <button class="chip" data-help="grilling" type="button">🍖 Grilling</button>
+              <button class="chip" data-help="setup" type="button">⛺ Camp setup</button>
+              <button class="chip" data-help="dj" type="button">🎵 DJ / Music</button>
+              <button class="chip" data-help="photo" type="button">📷 Photography</button>
+            </div>
+            <label class="field-group">Emergency contact <small>Recommended for a river activity</small><input id="p_emergency_name" placeholder="Contact name" /></label>
+            <label class="field-group">Emergency phone <input id="p_emergency_phone" type="tel" placeholder="Contact phone" /></label>
+            <label class="field-group">Anything else? <small>Special requests, equipment needs, etc.</small><textarea id="p_comments" placeholder="e.g. I need a tent and sleeping bag"></textarea></label>
+          </div>
+
+          <div class="profile-save-bar">
+            <p class="form-status" id="profileSaveStatus" role="status"></p>
+            <button class="nav-btn primary" id="profileSaveBtn" type="button">Save changes</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="admin-container registration-side-panel" id="admin">
