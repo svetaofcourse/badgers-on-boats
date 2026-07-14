@@ -914,6 +914,9 @@ function resetFormFlow() {
 
 function loadGuestForEdit(guest, asAdmin = false) {
   resetFormFlow();
+  document.body.classList.remove("panel-open");
+  $$(".registration-side-panel").forEach((el) => el.classList.remove("page-active"));
+  history.replaceState(null, "", location.pathname);
   editingGuestId = guest.id;
   editingAsAdmin = asAdmin;
   $("#f_name").value = guest.name || "";
@@ -1594,11 +1597,41 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 }
 
+const PANEL_ROUTES = ["guests", "transport", "profile", "admin"];
+
+function currentRoute() {
+  const hash = (location.hash || "").replace(/^#\/?/, "");
+  return PANEL_ROUTES.includes(hash) ? hash : "home";
+}
+
+function showRoute(route) {
+  const isPanel = PANEL_ROUTES.includes(route);
+  document.body.classList.toggle("panel-open", isPanel);
+  $$(".registration-side-panel").forEach((el) => el.classList.toggle("page-active", isPanel && el.id === route));
+  $$(".header-links a").forEach((link) => {
+    const target = (link.getAttribute("href") || "").replace(/^#\/?/, "");
+    link.classList.toggle("active", target === route);
+  });
+  if (route === "transport") renderTransport();
+  window.scrollTo({ top: 0 });
+}
+
+function handleRoute() {
+  showRoute(currentRoute());
+}
+
+function goHome() {
+  history.replaceState(null, "", location.pathname);
+  resetFormFlow();
+  showRoute("home");
+}
+
+window.addEventListener("hashchange", handleRoute);
+
 $("#startButton").addEventListener("click", () => goToStep(1));
 $(".logo").addEventListener("click", (event) => {
   event.preventDefault();
-  resetFormFlow();
-  history.replaceState(null, "", "/");
+  goHome();
 });
 $("#nextBtn").addEventListener("click", nextStep);
 $("#prevBtn").addEventListener("click", prevStep);
@@ -1753,3 +1786,4 @@ state = await loadPublicState();
 renderTripView();
 renderTransport();
 goToStep(0);
+handleRoute();

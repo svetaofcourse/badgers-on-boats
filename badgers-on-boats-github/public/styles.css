@@ -109,9 +109,34 @@ a {
   padding: 8px 10px;
 }
 
-.registration-active .header-links,
-.registration-active .registration-side-panel {
+.registration-active .header-links {
   display: none;
+}
+
+/* Multi-page routing: each side panel is its own page */
+.registration-side-panel {
+  display: none;
+}
+
+.registration-side-panel.page-active {
+  display: block;
+}
+
+body.panel-open #app {
+  min-height: 0;
+}
+
+body.panel-open .progress-bar,
+body.panel-open .steps-viewport,
+body.panel-open #formNav,
+body.panel-open #successPanel {
+  display: none !important;
+}
+
+.header-links a.active {
+  color: var(--bolt-dark);
+  background: var(--bolt-green-light);
+  border-radius: var(--radius-full);
 }
 
 .step-counter {
@@ -391,6 +416,15 @@ textarea:focus,
 select:focus {
   border-color: var(--bolt-green);
   box-shadow: 0 0 0 3px rgba(42, 156, 100, 0.16);
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2369726d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
 }
 
 .options-grid {
@@ -1145,6 +1179,14 @@ textarea:disabled {
 
 .profile-verify-hint {
   margin: 16px 0 12px;
+}
+
+#profileVerify .form-row {
+  margin-bottom: 18px;
+}
+
+#profileVerify .field-group {
+  margin-bottom: 0;
 }
 
 .profile-section {
