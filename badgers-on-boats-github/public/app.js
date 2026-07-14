@@ -963,41 +963,11 @@ function renderGuestList() {
       ${summaryItem("Drivers", driverCount())}
       ${summaryItem("Seats", seatCount())}
       ${summaryItem("Overnight", overnightCount())}
-    </div>
-    <div class="guest-table-wrap">
-      <table class="guest-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Party</th>
-            <th>Transport</th>
-            <th>Overnight</th>
-            <th>Kayak</th>
-            <th>Food</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${state.guests.map(guestRow).join("")}
-        </tbody>
-      </table>
     </div>`;
 }
 
 function summaryItem(label, value) {
   return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
-}
-
-function guestRow(guest) {
-  const plusOnes = guest.plusOnes?.length || (guest.plusOne ? 1 : 0);
-  const partySize = 1 + plusOnes;
-  return `<tr>
-    <td data-label="Name"><strong>${escapeHtml(guest.name)}</strong>${guest.plusOneName ? `<span>With ${escapeHtml(guest.plusOneName)}</span>` : ""}</td>
-    <td data-label="Party">${partySize} ${partySize === 1 ? "person" : "people"}</td>
-    <td data-label="Transport">${escapeHtml(labelDriver(guest.canDrive))}${guest.totalSeats ? `<span>${escapeHtml(guest.totalSeats)} seats</span>` : ""}</td>
-    <td data-label="Overnight">${escapeHtml(labelStay(guest.stayingOvernight))}</td>
-    <td data-label="Kayak">${escapeHtml(labelExperience(guest.kayakExperience))}<span>${escapeHtml(labelKayakType(guest.kayakTypePref))}</span></td>
-    <td data-label="Food">${escapeHtml(guest.eatingGroupFood ? guest.dietaryPref || "group food" : "own food")}</td>
-  </tr>`;
 }
 
 function fillSettingsForm() {
