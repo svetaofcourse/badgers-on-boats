@@ -321,7 +321,7 @@ async function loadTransport() {
   const { data: cars, error: carsError } = await sb
     .from("cars")
     .select(
-      "id, total_seats, driver_guest_id, driver:guests!cars_driver_guest_id_fkey(id, name, starting_from, staying_overnight), car_passengers(id, guest_id, plus_one_id, guest:guests(id, name), plus_one:plus_ones(id, name))"
+      "id, total_seats, driver_guest_id, driver:guests!cars_driver_guest_id_fkey(id, name, starting_from, staying_overnight), car_passengers(id, guest_id, plus_one_id, guest:guests(id, name), plus_one:plus_ones(id, name, owner:guests(name)))"
     )
     .eq("trip_id", tripId)
     .order("created_at", { ascending: true });
@@ -479,8 +479,9 @@ function seatHtml(passenger, isDriver) {
   const person = passenger.guest || passenger.plus_one || {};
   const isPlusOne = Boolean(passenger.plus_one_id);
   const name = person.name || "Unknown";
+  const ownerName = isPlusOne && passenger.plus_one ? passenger.plus_one.owner?.name : "";
   return `<div class="seat filled${isDriver ? " driver" : ""}">
-    <span class="seat-person">${isDriver ? `<span class="seat-badge">${wheelIcon()}</span>` : ""}${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}</span>
+    <span class="seat-person">${isDriver ? `<span class="seat-badge">${wheelIcon()}</span>` : ""}${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
     ${
       isDriver
         ? `<span class="seat-role">Driver</span>`

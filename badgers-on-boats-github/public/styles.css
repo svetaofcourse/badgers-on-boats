@@ -1317,6 +1317,12 @@ textarea:disabled {
   color: var(--bolt-green-dark);
 }
 
+.seat-detail {
+  color: var(--bolt-gray-500);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
 .seat-role {
   color: var(--bolt-green-dark);
   font-size: 0.72rem;
