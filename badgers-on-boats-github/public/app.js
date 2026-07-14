@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { marked } from "https://esm.sh/marked@12";
 
 const SUPABASE_URL = "https://ejeymkhfhtrwuqowkioq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_-XiFykzmn0WdqAIvzeNnkQ_gCJOEb_n";
@@ -1828,7 +1829,42 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 }
 
-const PANEL_ROUTES = ["guests", "transport", "fleet", "profile", "admin"];
+const GUIDE_URL = "/articles/my-article/my-article.md";
+let guideLoaded = false;
+
+function preprocessGuideMarkdown(md) {
+  return md
+    .replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)(?:\{([^}]*)\})?/g, (match, alt, src, attrs) => {
+      let url = src.trim().replace(/^public\//, "/");
+      if (!/^(https?:)?\/\//.test(url) && !url.startsWith("/")) url = `/${url.replace(/^\.\//, "")}`;
+      let style = "";
+      if (attrs) {
+        const width = attrs.match(/width="([\d.]+)in"/);
+        if (width) style = ` style="max-width:${Math.round(parseFloat(width[1]) * 96)}px"`;
+      }
+      const altText = escapeHtml(alt || "");
+      return `<img src="${escapeHtml(url)}" alt="${altText}"${style} loading="lazy" />`;
+    })
+    .replace(/\[([^\]]+)\]\{\.underline\}/g, "<u>$1</u>")
+    .replace(/\[([^\]]+)\]\{\.mark\}/g, "<mark>$1</mark>")
+    .replace(/\{\.[^}]*\}/g, "");
+}
+
+async function renderGuide() {
+  const el = $("#guideContent");
+  if (!el || guideLoaded) return;
+  try {
+    const response = await fetch(`${GUIDE_URL}?v=${Date.now()}`);
+    if (!response.ok) throw new Error(`Could not load the guide (${response.status}).`);
+    const markdown = await response.text();
+    el.innerHTML = marked.parse(preprocessGuideMarkdown(markdown), { gfm: true, breaks: false });
+    guideLoaded = true;
+  } catch (error) {
+    el.innerHTML = `<p class="transport-empty">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+const PANEL_ROUTES = ["guests", "transport", "fleet", "guide", "profile", "admin"];
 
 function currentRoute() {
   const hash = (location.hash || "").replace(/^#\/?/, "");
@@ -1845,6 +1881,7 @@ function showRoute(route) {
   });
   if (route === "transport") renderTransport();
   if (route === "fleet") renderFleet();
+  if (route === "guide") renderGuide();
   window.scrollTo({ top: 0 });
 }
 

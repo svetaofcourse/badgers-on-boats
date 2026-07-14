@@ -1687,6 +1687,181 @@ textarea:disabled {
   font-size: 0.76rem;
 }
 
+/* Guide (Markdown article) */
+.markdown-body {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  color: var(--bolt-gray-700);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  color: var(--bolt-dark);
+  scroll-margin-top: 84px;
+}
+
+.markdown-body h1 {
+  margin: 40px 0 16px;
+  font-size: clamp(1.9rem, 5vw, 2.5rem);
+  line-height: 1.1;
+  font-weight: 780;
+}
+
+.markdown-body h2 {
+  margin: 36px 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bolt-gray-200);
+  font-size: 1.6rem;
+  font-weight: 740;
+}
+
+.markdown-body h3 {
+  margin: 28px 0 12px;
+  font-size: 1.25rem;
+  font-weight: 720;
+}
+
+.markdown-body h4 {
+  margin: 24px 0 10px;
+  font-size: 1.05rem;
+  font-weight: 720;
+}
+
+.markdown-body p {
+  margin: 0 0 16px;
+}
+
+.markdown-body a {
+  color: var(--bolt-green-dark);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body a:hover {
+  color: var(--bolt-green);
+}
+
+.markdown-body strong {
+  color: var(--bolt-dark);
+  font-weight: 750;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 0 0 16px;
+  padding-left: 24px;
+}
+
+.markdown-body li {
+  margin-bottom: 6px;
+}
+
+.markdown-body li::marker {
+  color: var(--bolt-green);
+}
+
+.markdown-body mark {
+  background: var(--bolt-green-light);
+  color: var(--bolt-dark);
+  padding: 0 3px;
+  border-radius: var(--radius-sm);
+}
+
+.markdown-body blockquote {
+  margin: 0 0 16px;
+  padding: 4px 16px;
+  border-left: 3px solid var(--bolt-green);
+  background: var(--bolt-gray-50);
+  color: var(--bolt-gray-600);
+}
+
+.markdown-body hr {
+  margin: 28px 0;
+  border: 0;
+  border-top: 1px solid var(--bolt-gray-200);
+}
+
+.markdown-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 20px auto;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.markdown-body .image-caption {
+  margin: -8px 0 20px;
+  text-align: center;
+  color: var(--bolt-gray-500);
+  font-size: 0.88rem;
+}
+
+.markdown-body table {
+  width: 100%;
+  margin: 0 0 20px;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.96rem;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--bolt-gray-100);
+}
+
+.markdown-body th {
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.markdown-body tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.markdown-body code {
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bolt-gray-100);
+  color: var(--bolt-gray-700);
+  font-size: 0.9em;
+}
+
+.markdown-body pre {
+  margin: 0 0 16px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bolt-dark);
+  color: var(--bolt-white);
+  overflow-x: auto;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
 @media (max-width: 720px) {
   .transport-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
