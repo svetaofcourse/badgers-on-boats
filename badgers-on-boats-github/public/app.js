@@ -328,7 +328,7 @@ async function loadTransport() {
   const { data: cars, error: carsError } = await sb
     .from("cars")
     .select(
-      "id, total_seats, driver_guest_id, driver:guests!cars_driver_guest_id_fkey(id, name, starting_from, staying_overnight), car_passengers(id, guest_id, plus_one_id, guest:guests(id, name), plus_one:plus_ones(id, name, owner:guests(name)))"
+      "id, total_seats, driver_guest_id, driver:guests!cars_driver_guest_id_fkey(id, name, starting_from, staying_overnight), car_passengers(id, guest_id, plus_one_id, guest:guests(id, name, staying_overnight), plus_one:plus_ones(id, name, owner:guests(name, staying_overnight)))"
     )
     .eq("trip_id", tripId)
     .order("created_at", { ascending: true });
@@ -343,7 +343,7 @@ async function loadTransport() {
 
   const { data: plusOnes, error: plusOnesError } = await sb
     .from("plus_ones")
-    .select("id, name, guest_id, owner:guests(name, trip_id)");
+    .select("id, name, guest_id, owner:guests(name, trip_id, staying_overnight)");
   if (plusOnesError) throw new Error(plusOnesError.message);
 
   const tripPlusOnes = (plusOnes || []).filter((item) => item.owner && item.owner.trip_id === tripId);
@@ -360,11 +360,11 @@ async function loadTransport() {
   const unassignedGuests = (guests || [])
     .filter((guest) => !["yes", "bolt_drive"].includes(guest.can_drive))
     .filter((guest) => !assignedGuestIds.has(guest.id))
-    .map((guest) => ({ type: "guest", id: guest.id, name: guest.name, startingFrom: guest.starting_from }));
+    .map((guest) => ({ type: "guest", id: guest.id, name: guest.name, startingFrom: guest.starting_from, stayingOvernight: guest.staying_overnight }));
 
   const unassignedPlusOnes = tripPlusOnes
     .filter((item) => !assignedPlusOneIds.has(item.id))
-    .map((item) => ({ type: "plus_one", id: item.id, name: item.name, ownerName: item.owner ? item.owner.name : "" }));
+    .map((item) => ({ type: "plus_one", id: item.id, name: item.name, ownerName: item.owner ? item.owner.name : "", stayingOvernight: item.owner ? item.owner.staying_overnight : "no" }));
 
   return { cars: cars || [], unassigned: [...unassignedGuests, ...unassignedPlusOnes] };
 }
@@ -487,8 +487,9 @@ function seatHtml(passenger, isDriver) {
   const isPlusOne = Boolean(passenger.plus_one_id);
   const name = person.name || "Unknown";
   const ownerName = isPlusOne && passenger.plus_one ? passenger.plus_one.owner?.name : "";
+  const overnight = isPlusOne ? passenger.plus_one?.owner?.staying_overnight : person.staying_overnight;
   return `<div class="seat filled${isDriver ? " driver" : ""}">
-    <span class="seat-person">${isDriver ? `<span class="seat-badge">${wheelIcon()}</span>` : ""}${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
+    <span class="seat-person">${isDriver ? `<span class="seat-badge">${wheelIcon()}</span>` : ""}${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${isDriver ? "" : overnightBadge(overnight)}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
     ${
       isDriver
         ? `<span class="seat-role">Driver</span>`
@@ -517,7 +518,7 @@ function personChipHtml(person) {
   const selected = selectedPerson && selectedPerson.type === person.type && selectedPerson.id === person.id;
   const detail = person.type === "plus_one" ? `+1 of ${person.ownerName || "?"}` : person.startingFrom || "";
   return `<button class="person-chip${person.type === "plus_one" ? " is-plus-one" : ""}${selected ? " selected" : ""}" type="button" data-person-type="${escapeHtml(person.type)}" data-person-id="${escapeHtml(person.id)}" data-person-name="${escapeHtml(person.name)}">
-    <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}</span>
+    <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${overnightBadge(person.stayingOvernight)}</span>
     ${detail ? `<span class="chip-detail">${escapeHtml(detail)}</span>` : ""}
   </button>`;
 }
