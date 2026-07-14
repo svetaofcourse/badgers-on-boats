@@ -1492,8 +1492,7 @@ function renderGuestList() {
     return;
   }
   list.innerHTML = `<div class="guest-summary" aria-label="Registration summary">
-      ${summaryItem("Registered", state.guests.length)}
-      ${summaryItem("People", participantCount())}
+      ${summaryItem("People (incl. +1s)", participantCount())}
       ${summaryItem("Drivers", driverCount())}
       ${summaryItem("Seats", seatCount())}
       ${summaryItem("Overnight", overnightCount())}
