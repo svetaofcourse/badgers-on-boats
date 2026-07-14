@@ -14,6 +14,9 @@ let editingAsAdmin = false;
 let selectedPerson = null;
 let transportData = null;
 let openPickerCarId = null;
+let fleetData = null;
+let selectedFleetPerson = null;
+let openPickerBoatId = null;
 
 const totalSteps = 8;
 const formState = {
@@ -560,6 +563,233 @@ async function unassignPassenger(id) {
     const { error } = await sb.from("car_passengers").delete().eq("id", id);
     if (error) throw new Error(error.message);
     await renderTransport();
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  }
+}
+
+async function loadFleet() {
+  const { data: boats, error: boatsError } = await sb
+    .from("boats")
+    .select(
+      "id, boat_type, seats, label, boat_assignments(id, guest_id, plus_one_id, guest:guests(id, name, kayak_type_pref), plus_one:plus_ones(id, name, owner:guests(name, kayak_type_pref)))"
+    )
+    .eq("trip_id", tripId)
+    .order("created_at", { ascending: true });
+  if (boatsError) throw new Error(boatsError.message);
+
+  const { data: guests, error: guestsError } = await sb
+    .from("guests")
+    .select("id, name, kayak_type_pref")
+    .eq("trip_id", tripId)
+    .order("name", { ascending: true });
+  if (guestsError) throw new Error(guestsError.message);
+
+  const { data: plusOnes, error: plusOnesError } = await sb
+    .from("plus_ones")
+    .select("id, name, guest_id, owner:guests(name, trip_id, kayak_type_pref)");
+  if (plusOnesError) throw new Error(plusOnesError.message);
+
+  const tripPlusOnes = (plusOnes || []).filter((item) => item.owner && item.owner.trip_id === tripId);
+
+  const assignedGuestIds = new Set();
+  const assignedPlusOneIds = new Set();
+  (boats || []).forEach((boat) => {
+    (boat.boat_assignments || []).forEach((occupant) => {
+      if (occupant.guest_id) assignedGuestIds.add(occupant.guest_id);
+      if (occupant.plus_one_id) assignedPlusOneIds.add(occupant.plus_one_id);
+    });
+  });
+
+  const unassignedGuests = (guests || [])
+    .filter((guest) => !assignedGuestIds.has(guest.id))
+    .map((guest) => ({ type: "guest", id: guest.id, name: guest.name, boatPref: guest.kayak_type_pref }));
+
+  const unassignedPlusOnes = tripPlusOnes
+    .filter((item) => !assignedPlusOneIds.has(item.id))
+    .map((item) => ({
+      type: "plus_one",
+      id: item.id,
+      name: item.name,
+      ownerName: item.owner ? item.owner.name : "",
+      boatPref: item.owner ? item.owner.kayak_type_pref : "any"
+    }));
+
+  return { boats: boats || [], unassigned: [...unassignedGuests, ...unassignedPlusOnes] };
+}
+
+async function renderFleet() {
+  const boatsEl = $("#fleetBoats");
+  if (!boatsEl) return;
+  try {
+    fleetData = await loadFleet();
+  } catch (error) {
+    boatsEl.innerHTML = `<p class="transport-empty">Could not load fleet info: ${escapeHtml(error.message)}</p>`;
+    return;
+  }
+  const stillOpen = fleetData.boats.some((boat) => boat.id === openPickerBoatId);
+  if (!stillOpen) openPickerBoatId = null;
+  paintFleet();
+}
+
+function paintFleet() {
+  if (!fleetData) return;
+  renderFleetSummary(fleetData);
+  renderFleetBoats(fleetData);
+  renderFleetUnassigned(fleetData);
+}
+
+function renderFleetSummary(data) {
+  const el = $("#fleetSummary");
+  if (!el) return;
+  const totalSeats = data.boats.reduce((sum, boat) => sum + (boat.seats || 0), 0);
+  const filled = data.boats.reduce((sum, boat) => sum + (boat.boat_assignments || []).length, 0);
+  const free = data.boats.reduce((sum, boat) => sum + Math.max(0, (boat.seats || 0) - (boat.boat_assignments || []).length), 0);
+  const items = [
+    ["Boats", data.boats.length],
+    ["Total seats", totalSeats],
+    ["Seats filled", filled],
+    ["Seats free", free],
+    ["Unassigned", data.unassigned.length]
+  ];
+  el.innerHTML = items
+    .map(([label, value]) => `<div class="transport-stat"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`)
+    .join("");
+}
+
+function renderFleetBoats(data) {
+  const el = $("#fleetBoats");
+  if (!el) return;
+  if (!data.boats.length) {
+    el.innerHTML = `<p class="transport-empty">No boats in the fleet yet.</p>`;
+    return;
+  }
+  el.innerHTML = data.boats.map((boat) => boatCardHtml(boat)).join("");
+}
+
+function boatCardHtml(boat) {
+  const seats = boat.seats || 0;
+  const occupants = boat.boat_assignments || [];
+  const freeSeats = Math.max(0, seats - occupants.length);
+
+  const slots = occupants.map((occupant) => boatSeatHtml(occupant));
+  for (let i = 0; i < freeSeats; i += 1) slots.push(emptyBoatSeatHtml(boat.id));
+
+  return `<article class="car-card" data-boat-id="${escapeHtml(boat.id)}">
+    <header class="car-card-header">
+      <div class="car-title">
+        <span class="boat-icon" title="${escapeHtml(labelBoatType(boat.boat_type))}">${boatIcon(boat.boat_type)}</span>
+        <h3>${escapeHtml(boat.label || "Boat")}</h3>
+      </div>
+      <span class="boat-type-pill">${escapeHtml(labelBoatType(boat.boat_type))}</span>
+    </header>
+    <div class="seat-grid">${slots.join("")}</div>
+    ${openPickerBoatId === boat.id ? boatPickerHtml(boat.id) : ""}
+  </article>`;
+}
+
+function boatPickerHtml(boatId) {
+  const people = fleetData ? fleetData.unassigned : [];
+  const options = people.length
+    ? people
+        .map(
+          (person) =>
+            `<button class="picker-option" type="button" data-pick-boat="${escapeHtml(boatId)}" data-person-type="${escapeHtml(person.type)}" data-person-id="${escapeHtml(person.id)}">
+              <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(person.boatPref)}</span>
+              ${
+                person.type === "plus_one"
+                  ? `<span class="picker-detail">+1 of ${escapeHtml(person.ownerName || "?")}</span>`
+                  : ""
+              }
+            </button>`
+        )
+        .join("")
+    : `<p class="transport-empty">No unassigned people left.</p>`;
+  return `<div class="seat-picker">
+    <div class="seat-picker-head"><span>Add to this boat</span><button class="seat-picker-close" type="button" data-close-boat-picker aria-label="Close">×</button></div>
+    <div class="seat-picker-list">${options}</div>
+  </div>`;
+}
+
+function boatSeatHtml(occupant) {
+  const person = occupant.guest || occupant.plus_one || {};
+  const isPlusOne = Boolean(occupant.plus_one_id);
+  const name = person.name || "Unknown";
+  const ownerName = isPlusOne && occupant.plus_one ? occupant.plus_one.owner?.name : "";
+  const boatPref = isPlusOne ? occupant.plus_one?.owner?.kayak_type_pref : person.kayak_type_pref;
+  return `<div class="seat filled">
+    <span class="seat-person">${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(boatPref)}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
+    <button class="seat-remove" type="button" data-remove-occupant="${escapeHtml(occupant.id)}" aria-label="Remove ${escapeHtml(name)}">×</button>
+  </div>`;
+}
+
+function emptyBoatSeatHtml(boatId) {
+  return `<button class="seat empty" type="button" data-assign-boat="${escapeHtml(boatId)}"><span class="seat-empty-label">+ Available</span></button>`;
+}
+
+function renderFleetUnassigned(data) {
+  const el = $("#fleetUnassigned");
+  if (!el) return;
+  const chips = data.unassigned.map((person) => fleetChipHtml(person)).join("");
+  el.innerHTML = `<div class="unassigned-head"><h3>Unassigned</h3><span class="unassigned-count">${data.unassigned.length} waiting for a boat</span></div>
+    <div class="chip-pool">${chips || `<p class="transport-empty">Everyone has a boat.</p>`}</div>`;
+}
+
+function fleetChipHtml(person) {
+  const selected = selectedFleetPerson && selectedFleetPerson.type === person.type && selectedFleetPerson.id === person.id;
+  const detail = person.type === "plus_one" ? `+1 of ${person.ownerName || "?"}` : "";
+  return `<button class="person-chip${person.type === "plus_one" ? " is-plus-one" : ""}${selected ? " selected" : ""}" type="button" data-person-type="${escapeHtml(person.type)}" data-person-id="${escapeHtml(person.id)}" data-person-name="${escapeHtml(person.name)}">
+    <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(person.boatPref)}</span>
+    ${detail ? `<span class="chip-detail">${escapeHtml(detail)}</span>` : ""}
+  </button>`;
+}
+
+function labelBoatType(value) {
+  return {
+    two_seater_kayak: "Kayak",
+    two_seater_canoe: "Canoe",
+    three_seater_kayak: "Kayak",
+    three_seater_canoe: "Canoe",
+    kayak: "Kayak",
+    canoe: "Canoe"
+  }[value] || "Boat";
+}
+
+function boatPrefBadge(value) {
+  if (value === "two_person") return `<span class="boat-pref-badge kayak" title="Prefers a kayak">🛶 Prefers kayak</span>`;
+  if (value === "two_person_canoe") return `<span class="boat-pref-badge canoe" title="Prefers a canoe">🛶 Prefers canoe</span>`;
+  return `<span class="boat-pref-badge any" title="No boat preference">Any boat</span>`;
+}
+
+function boatIcon(boatType) {
+  const isCanoe = String(boatType || "").includes("canoe");
+  const label = isCanoe ? "Canoe" : "Kayak";
+  return `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><title>${label}</title><path d="M2 14c4 3 16 3 20 0-2 4-6 6-10 6S4 18 2 14z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 4v9" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
+}
+
+async function assignPersonToBoat(boatId, person) {
+  if (!person) return;
+  const status = $("#fleetStatus");
+  try {
+    const column = person.type === "guest" ? "guest_id" : "plus_one_id";
+    await sb.from("boat_assignments").delete().eq(column, person.id);
+    const { error } = await sb.from("boat_assignments").insert({ boat_id: boatId, [column]: person.id });
+    if (error) throw new Error(error.message);
+    selectedFleetPerson = null;
+    openPickerBoatId = null;
+    if (status) status.textContent = "";
+    await renderFleet();
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  }
+}
+
+async function unassignBoatOccupant(id) {
+  const status = $("#fleetStatus");
+  try {
+    const { error } = await sb.from("boat_assignments").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    await renderFleet();
   } catch (error) {
     if (status) status.textContent = error.message;
   }
@@ -1598,7 +1828,7 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 }
 
-const PANEL_ROUTES = ["guests", "transport", "profile", "admin"];
+const PANEL_ROUTES = ["guests", "transport", "fleet", "profile", "admin"];
 
 function currentRoute() {
   const hash = (location.hash || "").replace(/^#\/?/, "");
@@ -1614,6 +1844,7 @@ function showRoute(route) {
     link.classList.toggle("active", target === route);
   });
   if (route === "transport") renderTransport();
+  if (route === "fleet") renderFleet();
   window.scrollTo({ top: 0 });
 }
 
@@ -1780,6 +2011,50 @@ $("#transport").addEventListener("click", (event) => {
   const remove = event.target.closest("[data-remove-passenger]");
   if (remove) {
     unassignPassenger(remove.dataset.removePassenger);
+  }
+});
+
+$("#fleet").addEventListener("click", (event) => {
+  const chip = event.target.closest(".person-chip[data-person-id]");
+  if (chip) {
+    const type = chip.dataset.personType;
+    const id = chip.dataset.personId;
+    const name = chip.dataset.personName;
+    const isSame = selectedFleetPerson && selectedFleetPerson.type === type && selectedFleetPerson.id === id;
+    selectedFleetPerson = isSame ? null : { type, id, name };
+    openPickerBoatId = null;
+    const status = $("#fleetStatus");
+    if (status) status.textContent = selectedFleetPerson ? `Selected ${name} — tap an open spot to place them.` : "";
+    paintFleet();
+    return;
+  }
+  const pick = event.target.closest("[data-pick-boat]");
+  if (pick) {
+    const person = (fleetData ? fleetData.unassigned : []).find(
+      (item) => item.type === pick.dataset.personType && item.id === pick.dataset.personId
+    );
+    if (person) assignPersonToBoat(pick.dataset.pickBoat, person);
+    return;
+  }
+  if (event.target.closest("[data-close-boat-picker]")) {
+    openPickerBoatId = null;
+    paintFleet();
+    return;
+  }
+  const assign = event.target.closest("[data-assign-boat]");
+  if (assign) {
+    const boatId = assign.dataset.assignBoat;
+    if (selectedFleetPerson) {
+      assignPersonToBoat(boatId, selectedFleetPerson);
+      return;
+    }
+    openPickerBoatId = openPickerBoatId === boatId ? null : boatId;
+    paintFleet();
+    return;
+  }
+  const remove = event.target.closest("[data-remove-occupant]");
+  if (remove) {
+    unassignBoatOccupant(remove.dataset.removeOccupant);
   }
 });
 

@@ -1373,6 +1373,56 @@ textarea:disabled {
   color: var(--bolt-gray-600);
 }
 
+.boat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+}
+
+.boat-type-pill {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--bolt-gray-50);
+  border: 1px solid var(--bolt-gray-200);
+  color: var(--bolt-gray-700);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.boat-pref-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.boat-pref-badge.kayak {
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+}
+
+.boat-pref-badge.canoe {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.boat-pref-badge.any {
+  background: var(--bolt-gray-100);
+  color: var(--bolt-gray-600);
+}
+
 .car-departure {
   margin-top: -4px;
 }
