@@ -12,6 +12,7 @@
         <a class="logo" href="/" aria-label="Back to home"><span>Bolt</span> Kayak Trip <strong>2026</strong></a>
         <nav class="header-links" aria-label="Main navigation">
           <a href="#guests">Guests</a>
+          <a href="#transport">Transport</a>
           <a href="#admin">Admin</a>
         </nav>
         <div class="step-counter" id="stepCounter"></div>
@@ -264,6 +265,21 @@
         <a class="text-link" href="#signup">Back to signup</a>
       </div>
       <div class="guest-list" id="guestList"></div>
+    </section>
+
+    <section class="public-section registration-side-panel" id="transport">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Who rides with whom</p>
+          <h2>Transport</h2>
+        </div>
+        <a class="text-link" href="#signup">Back to signup</a>
+      </div>
+      <p class="transport-hint">Tap a person below, then tap an open seat to assign them. Tap the × on a passenger to unassign.</p>
+      <p class="form-status" id="transportStatus" role="status"></p>
+      <div id="transportSummary" class="transport-summary"></div>
+      <div id="transportCars" class="transport-cars"></div>
+      <div id="transportUnassigned" class="transport-unassigned"></div>
     </section>
 
     <section class="admin-container registration-side-panel" id="admin">
