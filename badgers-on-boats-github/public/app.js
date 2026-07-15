@@ -609,7 +609,7 @@ async function loadFleet() {
   const { data: boats, error: boatsError } = await sb
     .from("boats")
     .select(
-      "id, boat_type, seats, label, boat_assignments(id, guest_id, plus_one_id, guest:guests(id, name, kayak_type_pref), plus_one:plus_ones(id, name, owner:guests(name, kayak_type_pref)))"
+      "id, boat_type, seats, label, boat_assignments(id, guest_id, plus_one_id, guest:guests(id, name, kayak_type_pref, kayak_experience), plus_one:plus_ones(id, name, owner:guests(name, kayak_type_pref, kayak_experience)))"
     )
     .eq("trip_id", tripId)
     .order("created_at", { ascending: true });
@@ -617,14 +617,14 @@ async function loadFleet() {
 
   const { data: guests, error: guestsError } = await sb
     .from("guests")
-    .select("id, name, kayak_type_pref")
+    .select("id, name, kayak_type_pref, kayak_experience")
     .eq("trip_id", tripId)
     .order("name", { ascending: true });
   if (guestsError) throw new Error(guestsError.message);
 
   const { data: plusOnes, error: plusOnesError } = await sb
     .from("plus_ones")
-    .select("id, name, guest_id, owner:guests(name, trip_id, kayak_type_pref)");
+    .select("id, name, guest_id, owner:guests(name, trip_id, kayak_type_pref, kayak_experience)");
   if (plusOnesError) throw new Error(plusOnesError.message);
 
   const tripPlusOnes = (plusOnes || []).filter((item) => item.owner && item.owner.trip_id === tripId);
@@ -640,7 +640,7 @@ async function loadFleet() {
 
   const unassignedGuests = (guests || [])
     .filter((guest) => !assignedGuestIds.has(guest.id))
-    .map((guest) => ({ type: "guest", id: guest.id, name: guest.name, boatPref: guest.kayak_type_pref }));
+    .map((guest) => ({ type: "guest", id: guest.id, name: guest.name, boatPref: guest.kayak_type_pref, experience: guest.kayak_experience }));
 
   const unassignedPlusOnes = tripPlusOnes
     .filter((item) => !assignedPlusOneIds.has(item.id))
@@ -649,7 +649,8 @@ async function loadFleet() {
       id: item.id,
       name: item.name,
       ownerName: item.owner ? item.owner.name : "",
-      boatPref: item.owner ? item.owner.kayak_type_pref : "any"
+      boatPref: item.owner ? item.owner.kayak_type_pref : "any",
+      experience: item.owner ? item.owner.kayak_experience : ""
     }));
 
   return { boats: boats || [], unassigned: [...unassignedGuests, ...unassignedPlusOnes] };
@@ -732,7 +733,7 @@ function boatPickerHtml(boatId) {
         .map(
           (person) =>
             `<button class="picker-option" type="button" data-pick-boat="${escapeHtml(boatId)}" data-person-type="${escapeHtml(person.type)}" data-person-id="${escapeHtml(person.id)}">
-              <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(person.boatPref)}</span>
+              <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(person.boatPref)}${experienceBadge(person.experience)}</span>
               ${
                 person.type === "plus_one"
                   ? `<span class="picker-detail">+1 of ${escapeHtml(person.ownerName || "?")}</span>`
@@ -754,8 +755,9 @@ function boatSeatHtml(occupant) {
   const name = person.name || "Unknown";
   const ownerName = isPlusOne && occupant.plus_one ? occupant.plus_one.owner?.name : "";
   const boatPref = isPlusOne ? occupant.plus_one?.owner?.kayak_type_pref : person.kayak_type_pref;
+  const experience = isPlusOne ? occupant.plus_one?.owner?.kayak_experience : person.kayak_experience;
   return `<div class="seat filled">
-    <span class="seat-person">${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(boatPref)}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
+    <span class="seat-person">${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(boatPref)}${experienceBadge(experience)}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
     <button class="seat-remove" type="button" data-remove-occupant="${escapeHtml(occupant.id)}" aria-label="Remove ${escapeHtml(name)}">×</button>
   </div>`;
 }
@@ -776,7 +778,7 @@ function fleetChipHtml(person) {
   const selected = selectedFleetPerson && selectedFleetPerson.type === person.type && selectedFleetPerson.id === person.id;
   const detail = person.type === "plus_one" ? `+1 of ${person.ownerName || "?"}` : "";
   return `<button class="person-chip${person.type === "plus_one" ? " is-plus-one" : ""}${selected ? " selected" : ""}" type="button" data-person-type="${escapeHtml(person.type)}" data-person-id="${escapeHtml(person.id)}" data-person-name="${escapeHtml(person.name)}">
-    <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(person.boatPref)}</span>
+    <span class="chip-name">${escapeHtml(person.name)}${person.type === "plus_one" ? `<span class="plus-one-badge">+1</span>` : ""}${boatPrefBadge(person.boatPref)}${experienceBadge(person.experience)}</span>
     ${detail ? `<span class="chip-detail">${escapeHtml(detail)}</span>` : ""}
   </button>`;
 }
@@ -1630,9 +1632,13 @@ function drinksChip(guest) {
 }
 
 function experienceChip(guest) {
-  if (!guest.kayakExperience) return "";
+  return experienceBadge(guest.kayakExperience);
+}
+
+function experienceBadge(value) {
+  if (!value) return "";
   const icons = { beginner: "🐘", intermediate: "🌊", experienced: "🏆" };
-  return attrChip("gray", icons[guest.kayakExperience] || "🛶", labelExperience(guest.kayakExperience));
+  return attrChip("gray", icons[value] || "🛶", labelExperience(value));
 }
 
 function saunaChip(guest) {
