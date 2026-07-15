@@ -332,7 +332,7 @@ async function loadTransport() {
   const { data: cars, error: carsError } = await sb
     .from("cars")
     .select(
-      "id, total_seats, driver_guest_id, driver:guests!cars_driver_guest_id_fkey(id, name, starting_from, staying_overnight), car_passengers(id, guest_id, plus_one_id, guest:guests(id, name, staying_overnight), plus_one:plus_ones(id, name, owner:guests(name, staying_overnight)))"
+      "id, total_seats, is_ready, driver_guest_id, driver:guests!cars_driver_guest_id_fkey(id, name, starting_from, staying_overnight), car_passengers(id, guest_id, plus_one_id, guest:guests(id, name, staying_overnight), plus_one:plus_ones(id, name, owner:guests(name, staying_overnight)))"
     )
     .eq("trip_id", tripId)
     .order("created_at", { ascending: true });
@@ -428,37 +428,60 @@ function carCardHtml(car) {
   const passengers = car.car_passengers || [];
   const seatsUnknown = seats <= 0;
   const freeSeats = seatsUnknown ? 0 : Math.max(0, seats - passengers.length);
+  const isReady = Boolean(car.is_ready);
 
   const driverPassenger = passengers.find((passenger) => passenger.guest_id === car.driver_guest_id);
   const others = passengers.filter((passenger) => passenger !== driverPassenger);
 
   const slots = [];
-  if (driverPassenger) slots.push(seatHtml(driverPassenger, true));
+  if (driverPassenger) slots.push(seatHtml(driverPassenger, true, isReady));
   else if (driver.id) slots.push(driverSeatFallback(driver));
-  others.forEach((passenger) => slots.push(seatHtml(passenger, false)));
-  if (seatsUnknown) {
-    slots.push(emptySeatHtml(car.id, true));
-  } else {
-    for (let i = 0; i < freeSeats; i += 1) slots.push(emptySeatHtml(car.id, false));
+  others.forEach((passenger) => slots.push(seatHtml(passenger, false, isReady)));
+  if (!isReady) {
+    if (seatsUnknown) {
+      slots.push(emptySeatHtml(car.id, true));
+    } else {
+      for (let i = 0; i < freeSeats; i += 1) slots.push(emptySeatHtml(car.id, false));
+    }
   }
 
   const departure = driver.starting_from
     ? `<span class="departure-pill">${departurePin()} ${escapeHtml(driver.starting_from)}</span>`
     : `<span class="departure-pill muted">${departurePin()} Departure TBD</span>`;
 
-  return `<article class="car-card" data-car-id="${escapeHtml(car.id)}">
+  return `<article class="car-card${isReady ? " is-ready" : ""}" data-car-id="${escapeHtml(car.id)}">
     <header class="car-card-header">
       <div class="car-title">
         <span class="wheel-icon" title="Driver">${wheelIcon()}</span>
         <h3>${escapeHtml(driver.name || "Unknown")}'s car</h3>
       </div>
-      ${overnightBadge(driver.staying_overnight)}
+      ${isReady ? readyBadge() : overnightBadge(driver.staying_overnight)}
     </header>
     <div class="car-departure">${departure}</div>
     <div class="seat-grid">${slots.join("")}</div>
-    ${openPickerCarId === car.id ? pickerHtml(car.id) : ""}
-    ${seatsUnknown ? `<p class="seat-note">Seat count not set - add seats in the driver's registration</p>` : ""}
+    ${!isReady && openPickerCarId === car.id ? pickerHtml(car.id) : ""}
+    ${!isReady && seatsUnknown ? `<p class="seat-note">Seat count not set - add seats in the driver's registration</p>` : ""}
+    ${readyControlHtml(car.id, isReady)}
   </article>`;
+}
+
+function readyBadge() {
+  return `<span class="overnight-badge ready" title="This car is ready and locked">${checkIcon()} Ready</span>`;
+}
+
+function readyControlHtml(carId, isReady) {
+  const promise = "I have agreed with all the passengers where/when we are meeting and promise to keep them safe and on time";
+  if (isReady) {
+    return `<div class="car-ready-state" title="${escapeHtml(promise)}">${checkIcon()} <span>Driver approved &mdash; this car is ready and locked</span></div>`;
+  }
+  return `<button class="car-ready-toggle" type="button" data-mark-ready="${escapeHtml(carId)}" title="${escapeHtml(promise)}">
+    <span class="car-ready-box" aria-hidden="true"></span>
+    <span>I am the driver and I approve this car is ready</span>
+  </button>`;
+}
+
+function checkIcon() {
+  return `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
 function pickerHtml(carId) {
@@ -486,7 +509,7 @@ function pickerHtml(carId) {
   </div>`;
 }
 
-function seatHtml(passenger, isDriver) {
+function seatHtml(passenger, isDriver, locked = false) {
   const person = passenger.guest || passenger.plus_one || {};
   const isPlusOne = Boolean(passenger.plus_one_id);
   const name = person.name || "Unknown";
@@ -495,8 +518,8 @@ function seatHtml(passenger, isDriver) {
   return `<div class="seat filled${isDriver ? " driver" : ""}">
     <span class="seat-person">${isDriver ? `<span class="seat-badge">${wheelIcon()}</span>` : ""}${escapeHtml(name)}${isPlusOne ? `<span class="plus-one-badge">+1</span>` : ""}${isDriver ? "" : overnightBadge(overnight)}${isPlusOne ? `<span class="seat-detail">+1 of ${escapeHtml(ownerName || "?")}</span>` : ""}</span>
     ${
-      isDriver
-        ? `<span class="seat-role">Driver</span>`
+      isDriver || locked
+        ? `<span class="seat-role">${isDriver ? "Driver" : "Locked"}</span>`
         : `<button class="seat-remove" type="button" data-remove-passenger="${escapeHtml(passenger.id)}" aria-label="Unassign ${escapeHtml(name)}">×</button>`
     }
   </div>`;
@@ -552,6 +575,19 @@ async function assignPersonToCar(carId, person) {
     selectedPerson = null;
     openPickerCarId = null;
     if (status) status.textContent = "";
+    await renderTransport();
+  } catch (error) {
+    if (status) status.textContent = error.message;
+  }
+}
+
+async function markCarReady(carId) {
+  const status = $("#transportStatus");
+  try {
+    const { error } = await sb.from("cars").update({ is_ready: true }).eq("id", carId);
+    if (error) throw new Error(error.message);
+    if (openPickerCarId === carId) openPickerCarId = null;
+    if (status) status.textContent = "Car marked as ready and locked.";
     await renderTransport();
   } catch (error) {
     if (status) status.textContent = error.message;
@@ -2119,6 +2155,14 @@ $("#transport").addEventListener("click", (event) => {
     const status = $("#transportStatus");
     if (status) status.textContent = selectedPerson ? `Selected ${name} — tap an open seat to place them.` : "";
     paintTransport();
+    return;
+  }
+  const ready = event.target.closest("[data-mark-ready]");
+  if (ready) {
+    const confirmed = window.confirm(
+      "Mark this car as ready?\n\nThis confirms you have agreed with all the passengers where/when you are meeting and promise to keep them safe and on time. Once confirmed, the passenger list is locked and cannot be changed here."
+    );
+    if (confirmed) markCarReady(ready.dataset.markReady);
     return;
   }
   const pick = event.target.closest("[data-pick-car]");

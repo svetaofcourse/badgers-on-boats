@@ -1404,6 +1404,68 @@ textarea:disabled {
   color: var(--bolt-gray-600);
 }
 
+.overnight-badge.ready {
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+}
+
+.car-card.is-ready {
+  border-color: var(--bolt-green);
+  box-shadow: 0 0 0 1px var(--bolt-green), var(--shadow-sm);
+}
+
+.car-ready-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px dashed var(--bolt-gray-300, #cbd2d9);
+  background: var(--bolt-gray-100);
+  color: var(--bolt-gray-700, #3e4c59);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.car-ready-toggle:hover {
+  border-color: var(--bolt-green);
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+}
+
+.car-ready-box {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--bolt-gray-400, #9aa5b1);
+  background: var(--bolt-white);
+}
+
+.car-ready-toggle:hover .car-ready-box {
+  border-color: var(--bolt-green);
+}
+
+.car-ready-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 12px);
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.car-ready-state svg {
+  flex-shrink: 0;
+}
+
 .attr-chip {
   display: inline-flex;
   align-items: center;
