@@ -106,7 +106,7 @@ You'll definitely get hungry in the nature: the boat is quite spacious so it's b
 
 - Sweet stuff that doesn't melt: buns, biscuits
 
-- Enjoyable drinks besides water: alcohol also falls into this category. If you drink, definitely take a few beers/ciders into the boat - there's usually a convenient holder in the seat, and nothing beats sipping a beer while admiring Estonian nature on a river 🙂It's best to take it in cans not bottles - it's lighter, and cans don't drown as much as glass bottles.
+- Enjoyable drinks besides water: alcohol also falls into this category. If you drink, definitely take a few beers/ciders into the boat - there's usually a convenient holder in the seat, and nothing beats sipping a beer while admiring Latvian nature on a river 🙂It's best to take it in cans not bottles - it's lighter, and cans don't drown as much as glass bottles.
 
 ### Food for the evening
 
