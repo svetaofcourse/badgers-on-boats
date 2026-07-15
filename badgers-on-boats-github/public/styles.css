@@ -1337,6 +1337,10 @@ textarea:disabled {
   margin-bottom: 28px;
 }
 
+#fleetBoats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .car-card {
   display: flex;
   flex-direction: column;
@@ -1992,6 +1996,10 @@ textarea:disabled {
   }
 
   .transport-cars {
+    grid-template-columns: 1fr;
+  }
+
+  #fleetBoats {
     grid-template-columns: 1fr;
   }
 }
