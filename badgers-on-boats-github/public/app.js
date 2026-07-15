@@ -69,7 +69,8 @@ function mapTrip(row) {
     intro: row.intro,
     dateOptions: [],
     placeOptions: [],
-    lockedFields: row.locked_fields || []
+    lockedFields: row.locked_fields || [],
+    registrationOpen: row.registration_open !== false
   };
 }
 
@@ -315,6 +316,7 @@ async function saveSettings(trip) {
       meeting_point: trip.meetingPoint,
       intro: trip.intro,
       locked_fields: trip.lockedFields || [],
+      registration_open: trip.registrationOpen !== false,
       updated_at: new Date().toISOString()
     })
     .eq("id", tripId);
@@ -855,6 +857,22 @@ function renderTripView() {
   renderParticipantDatalist();
   renderGuestList();
   updateNav();
+  updateRegistrationLock();
+}
+
+function isRegistrationOpen() {
+  return !state || !state.trip || state.trip.registrationOpen !== false;
+}
+
+function updateRegistrationLock() {
+  const startButton = $("#startButton");
+  if (!startButton) return;
+  const open = isRegistrationOpen();
+  startButton.disabled = !open;
+  startButton.classList.toggle("is-locked", !open);
+  startButton.textContent = open ? "Let's go" : "Trip full";
+  const note = $("#registrationClosedNote");
+  if (note) note.hidden = open;
 }
 
 function firstWord(value) {
@@ -1137,6 +1155,10 @@ function reviewSection(title, step, rows) {
 async function submitGuest() {
   const button = $("#nextBtn");
   const data = collectData();
+  if (!editingGuestId && !editingAsAdmin && !isRegistrationOpen()) {
+    $("#guestStatus").textContent = "Registration is closed.";
+    return;
+  }
   try {
     button.disabled = true;
     button.textContent = editingGuestId ? "Updating..." : "Submitting...";
@@ -1651,12 +1673,13 @@ function fillSettingsForm() {
   Object.entries(state.trip).forEach(([key, value]) => {
     const input = form.elements[key];
     if (!input) return;
-    if (key === "lockedFields") return;
+    if (key === "lockedFields" || key === "registrationOpen") return;
     input.value = Array.isArray(value) ? value.join("\n") : value;
   });
   $$('input[name="lockedFields"]').forEach((input) => {
     input.checked = (state.trip.lockedFields || []).includes(input.value);
   });
+  form.elements.registrationOpen.checked = state.trip.registrationOpen !== false;
 }
 
 function renderAdmin() {
@@ -2039,7 +2062,10 @@ function goHome() {
 
 window.addEventListener("hashchange", handleRoute);
 
-$("#startButton").addEventListener("click", () => goToStep(1));
+$("#startButton").addEventListener("click", () => {
+  if (!isRegistrationOpen()) return;
+  goToStep(1);
+});
 $(".logo").addEventListener("click", (event) => {
   event.preventDefault();
   goHome();
@@ -2122,6 +2148,7 @@ $("#settingsForm").addEventListener("submit", async (event) => {
       location: data.location,
       meetingPoint: data.meetingPoint,
       lockedFields: new FormData(form).getAll("lockedFields"),
+      registrationOpen: form.elements.registrationOpen.checked,
       intro: data.intro
     });
     $("#settingsStatus").textContent = "Settings saved.";

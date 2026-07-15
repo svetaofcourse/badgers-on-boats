@@ -311,6 +311,17 @@ h3 {
   margin-top: 12px;
 }
 
+.welcome-note.registration-closed {
+  color: var(--bolt-gray-600);
+  font-weight: 700;
+}
+
+.start-btn.is-locked {
+  background: var(--bolt-gray-200, var(--bolt-gray-100));
+  color: var(--bolt-gray-500);
+  cursor: not-allowed;
+}
+
 .calendar-link {
   display: inline-flex;
   align-items: center;
@@ -360,6 +371,18 @@ h3 {
   color: var(--bolt-gray-400);
   font-size: 0.82rem;
   font-weight: 500;
+}
+
+.toggle-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.toggle-line input {
+  width: auto;
+  min-height: 0;
 }
 
 .lock-fieldset {

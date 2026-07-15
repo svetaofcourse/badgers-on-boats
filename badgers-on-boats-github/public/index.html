@@ -50,6 +50,7 @@
               <a class="calendar-link" id="calendarLink" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Bolt%20Kayak%20Trip%202026&dates=20260725%2F20260727&details=Placeholder%20for%20the%20Bolt%20Kayak%20Trip%202026.%20Trip%20details%20and%20final%20meeting%20point%20will%20be%20shared%20closer%20to%20the%20date.&location=To%20be%20decided" target="_blank" rel="noreferrer">Add July 25-26 to Google Calendar</a>
               <p class="welcome-note">Fill out this form to register. It takes about 3 minutes.</p>
               <button class="start-btn" type="button" id="startButton">Let's go</button>
+              <p class="welcome-note registration-closed" id="registrationClosedNote" hidden>Registration is closed for now. Already registered? You can still update your answers below.</p>
               <p class="welcome-note">Already registered? Update your answers anytime from <a class="text-link inline" href="#profile">My profile</a>.</p>
             </div>
           </section>
@@ -507,6 +508,7 @@
           <label class="field-group">Destination <input name="location" /></label>
           <label class="field-group">Meeting point <input name="meetingPoint" /></label>
           <label class="field-group">Intro <textarea name="intro" rows="3"></textarea></label>
+          <label class="toggle-line"><input name="registrationOpen" type="checkbox" /> Registration open (uncheck to show "Trip full")</label>
           <fieldset class="lock-fieldset">
             <legend>Locked edit sections</legend>
             <label><input name="lockedFields" type="checkbox" value="contact" /> Contact</label>
