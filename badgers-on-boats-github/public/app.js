@@ -421,7 +421,10 @@ function renderTransportCars(data) {
     el.innerHTML = `<p class="transport-empty">No drivers yet. When someone registers as a driver, their car appears here.</p>`;
     return;
   }
-  el.innerHTML = data.cars.map((car) => carCardHtml(car)).join("");
+  const sortedCars = [...data.cars].sort(
+    (a, b) => Number(Boolean(b.is_ready)) - Number(Boolean(a.is_ready))
+  );
+  el.innerHTML = sortedCars.map((car) => carCardHtml(car)).join("");
 }
 
 function carCardHtml(car) {
