@@ -796,7 +796,7 @@ textarea:disabled {
 
 .guest-summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--bolt-gray-200);
@@ -823,6 +823,20 @@ textarea:disabled {
   color: var(--bolt-green);
   font-size: 1.5rem;
   line-height: 1;
+}
+
+.participant-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.participant-board .board-column h4 {
+  margin-bottom: 12px;
+}
+
+.participant-board .board-column li {
+  color: var(--bolt-gray-700);
 }
 
 .guest-table-wrap {
@@ -1057,6 +1071,7 @@ textarea:disabled {
   .admin-grid,
   .admin-board,
   .assignment-grid,
+  .participant-board,
   .form-row,
   .admin-card,
   .admin-card dl {

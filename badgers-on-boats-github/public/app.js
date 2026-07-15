@@ -1491,16 +1491,47 @@ function renderGuestList() {
     list.innerHTML = `<article class="guest-empty"><h3>No registrations yet</h3><p>Be the first to sign up.</p></article>`;
     return;
   }
+  const groups = participantsByStatus();
   list.innerHTML = `<div class="guest-summary" aria-label="Registration summary">
       ${summaryItem("People (incl. +1s)", participantCount())}
       ${summaryItem("Drivers", driverCount())}
       ${summaryItem("Seats", seatCount())}
       ${summaryItem("Overnight", overnightCount())}
+    </div>
+    <div class="participant-board" aria-label="Participants by Bolt connection">
+      ${participantColumn("Bolt", groups.bolt)}
+      ${participantColumn("Ex-Bolt", groups.ex_bolt)}
+      ${participantColumn("Friends", groups.not_bolt)}
     </div>`;
 }
 
 function summaryItem(label, value) {
   return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function participantsByStatus() {
+  const groups = { bolt: [], ex_bolt: [], not_bolt: [] };
+  state.guests.forEach((guest) => {
+    const status = groups[guest.submitterStatus] ? guest.submitterStatus : "bolt";
+    groups[status].push({ name: guest.name });
+    (guest.plusOnes || []).forEach((plusOne) => {
+      const plusOneStatus = groups[plusOne.status] ? plusOne.status : "not_bolt";
+      groups[plusOneStatus].push({ name: plusOne.name, ownerName: guest.name });
+    });
+  });
+  return groups;
+}
+
+function participantColumn(title, people) {
+  const items = people.length
+    ? people
+        .map(
+          (person) =>
+            `<li>${escapeHtml(person.name)}${person.ownerName ? `<span>+1 of ${escapeHtml(person.ownerName)}</span>` : ""}</li>`
+        )
+        .join("")
+    : `<li><span>None yet</span></li>`;
+  return `<section class="board-column"><h4>${escapeHtml(title)} (${people.length})</h4><ul>${items}</ul></section>`;
 }
 
 function fillSettingsForm() {
