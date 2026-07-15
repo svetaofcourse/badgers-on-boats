@@ -825,18 +825,25 @@ textarea:disabled {
   line-height: 1;
 }
 
-.participant-board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.guest-row-name {
+  font-weight: 700;
+  color: var(--bolt-gray-800);
 }
 
-.participant-board .board-column h4 {
-  margin-bottom: 12px;
+.plusone-connector {
+  color: var(--bolt-gray-300);
+  font-weight: 700;
 }
 
-.participant-board .board-column li {
-  color: var(--bolt-gray-700);
+.guest-table tr.is-plusone .guest-row-name {
+  font-weight: 600;
+  color: var(--bolt-gray-600);
+  font-size: 0.92rem;
+}
+
+.guest-table-muted {
+  color: var(--bolt-gray-400);
+  font-size: 0.84rem;
 }
 
 .guest-table-wrap {
@@ -849,16 +856,23 @@ textarea:disabled {
 .guest-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 780px;
+  min-width: 980px;
   font-size: 0.92rem;
 }
 
 .guest-table th,
 .guest-table td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   text-align: left;
   border-bottom: 1px solid var(--bolt-gray-100);
-  vertical-align: top;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.guest-table th:first-child,
+.guest-table td:first-child,
+.guest-table td[colspan] {
+  white-space: normal;
 }
 
 .guest-table th {
@@ -868,19 +882,22 @@ textarea:disabled {
   text-transform: uppercase;
 }
 
-.guest-table td strong,
-.guest-table td span {
-  display: block;
-}
-
-.guest-table td span {
-  color: var(--bolt-gray-500);
-  font-size: 0.82rem;
-  margin-top: 2px;
-}
-
 .guest-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.guest-table tr.is-plusone td {
+  border-bottom: 1px solid var(--bolt-gray-100);
+  background: var(--bolt-gray-50);
+}
+
+.guest-table tr.is-plusone td:first-child {
+  padding-left: 30px;
+}
+
+.guest-table tr.is-plusone .plusone-connector,
+.guest-table tr.is-plusone .guest-row-name {
+  margin-right: 6px;
 }
 
 .admin-grid {
@@ -1071,7 +1088,6 @@ textarea:disabled {
   .admin-grid,
   .admin-board,
   .assignment-grid,
-  .participant-board,
   .form-row,
   .admin-card,
   .admin-card dl {
@@ -1384,6 +1400,37 @@ textarea:disabled {
 }
 
 .overnight-badge.day {
+  background: var(--bolt-gray-100);
+  color: var(--bolt-gray-600);
+}
+
+.attr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.attr-chip.tone-green {
+  background: var(--bolt-green-light);
+  color: var(--bolt-green-dark);
+}
+
+.attr-chip.tone-amber {
+  background: #fef3c7;
+  color: #92600a;
+}
+
+.attr-chip.tone-blue {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.attr-chip.tone-gray {
   background: var(--bolt-gray-100);
   color: var(--bolt-gray-600);
 }

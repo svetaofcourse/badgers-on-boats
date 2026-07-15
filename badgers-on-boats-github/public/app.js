@@ -1491,17 +1491,34 @@ function renderGuestList() {
     list.innerHTML = `<article class="guest-empty"><h3>No registrations yet</h3><p>Be the first to sign up.</p></article>`;
     return;
   }
-  const groups = participantsByStatus();
+  const order = { bolt: 0, ex_bolt: 1, not_bolt: 2 };
+  const sortedGuests = [...state.guests].sort((a, b) => (order[a.submitterStatus] ?? 0) - (order[b.submitterStatus] ?? 0));
   list.innerHTML = `<div class="guest-summary" aria-label="Registration summary">
       ${summaryItem("People (incl. +1s)", participantCount())}
       ${summaryItem("Drivers", driverCount())}
       ${summaryItem("Seats", seatCount())}
       ${summaryItem("Overnight", overnightCount())}
     </div>
-    <div class="participant-board" aria-label="Participants by Bolt connection">
-      ${participantColumn("Bolt", groups.bolt)}
-      ${participantColumn("Ex-Bolt", groups.ex_bolt)}
-      ${participantColumn("Friends", groups.not_bolt)}
+    <div class="guest-table-wrap">
+      <table class="guest-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Bolt</th>
+            <th>Overnight</th>
+            <th>Tent</th>
+            <th>Sleeping bag</th>
+            <th>Food</th>
+            <th>Diet</th>
+            <th>Drinks</th>
+            <th>Experience</th>
+            <th>Sauna</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sortedGuests.map((guest) => guestTableRows(guest)).join("")}
+        </tbody>
+      </table>
     </div>`;
 }
 
@@ -1509,29 +1526,82 @@ function summaryItem(label, value) {
   return `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
 }
 
-function participantsByStatus() {
-  const groups = { bolt: [], ex_bolt: [], not_bolt: [] };
-  state.guests.forEach((guest) => {
-    const status = groups[guest.submitterStatus] ? guest.submitterStatus : "bolt";
-    groups[status].push({ name: guest.name });
-    (guest.plusOnes || []).forEach((plusOne) => {
-      const plusOneStatus = groups[plusOne.status] ? plusOne.status : "not_bolt";
-      groups[plusOneStatus].push({ name: plusOne.name, ownerName: guest.name });
-    });
-  });
-  return groups;
+function guestTableRows(guest) {
+  const masterRow = `<tr>
+    <td data-label="Name"><span class="guest-row-name">${escapeHtml(guest.name)}</span></td>
+    <td data-label="Bolt">${boltChip(guest.submitterStatus)}</td>
+    <td data-label="Overnight">${overnightBadge(guest.stayingOvernight)}</td>
+    <td data-label="Tent">${tentChip(guest) || "-"}</td>
+    <td data-label="Sleeping bag">${sleepingBagChip(guest) || "-"}</td>
+    <td data-label="Food">${foodChip(guest)}</td>
+    <td data-label="Diet">${dietaryChip(guest) || "-"}</td>
+    <td data-label="Drinks">${drinksChip(guest)}</td>
+    <td data-label="Experience">${experienceChip(guest) || "-"}</td>
+    <td data-label="Sauna">${saunaChip(guest) || "-"}</td>
+  </tr>`;
+  const plusOneRows = (guest.plusOnes || [])
+    .map(
+      (plusOne) => `<tr class="is-plusone">
+        <td data-label="Name"><span class="plusone-connector" aria-hidden="true">↳</span><span class="guest-row-name">${escapeHtml(plusOne.name)}</span><span class="plus-one-badge">+1</span></td>
+        <td data-label="Bolt">${boltChip(plusOne.status)}</td>
+        <td data-label="Details" colspan="8"><span class="guest-table-muted">Shares ${escapeHtml(guest.name)}'s overnight/food/drinks details</span></td>
+      </tr>`
+    )
+    .join("");
+  return masterRow + plusOneRows;
 }
 
-function participantColumn(title, people) {
-  const items = people.length
-    ? people
-        .map(
-          (person) =>
-            `<li>${escapeHtml(person.name)}${person.ownerName ? `<span>+1 of ${escapeHtml(person.ownerName)}</span>` : ""}</li>`
-        )
-        .join("")
-    : `<li><span>None yet</span></li>`;
-  return `<section class="board-column"><h4>${escapeHtml(title)} (${people.length})</h4><ul>${items}</ul></section>`;
+function boltChip(status) {
+  return `<span class="boat-type-pill">${escapeHtml(labelBoltStatus(status))}</span>`;
+}
+
+function attrChip(tone, icon, label) {
+  return `<span class="attr-chip tone-${tone}" title="${escapeHtml(label)}">${icon} ${escapeHtml(label)}</span>`;
+}
+
+function tentChip(guest) {
+  if (guest.stayingOvernight === "no") return "";
+  if (guest.hasTent === "yes") return attrChip("green", "🏕️", "Own tent");
+  if (guest.hasTent === "share") return attrChip("blue", "🏕️", "Can share tent");
+  if (guest.hasTent === "no") return attrChip("amber", "🏕️", "Needs tent");
+  return "";
+}
+
+function sleepingBagChip(guest) {
+  if (guest.stayingOvernight === "no") return "";
+  if (guest.hasSleepingBag === "yes") return attrChip("green", "🛏️", "Has bag & mat");
+  if (guest.hasSleepingBag === "no") return attrChip("amber", "🛏️", "Needs bag & mat");
+  return "";
+}
+
+function foodChip(guest) {
+  if (guest.eatingGroupFood === false) return attrChip("gray", "🥪", "Bringing own food");
+  return attrChip("green", "🍖", "Group food");
+}
+
+function dietaryChip(guest) {
+  if (guest.eatingGroupFood === false) return "";
+  const icons = { meat: "🥩", vegetarian: "🥬", vegan: "🌿" };
+  const labels = { meat: "Meat", vegetarian: "Vegetarian", vegan: "Vegan" };
+  const value = guest.dietaryPref || "meat";
+  return attrChip("gray", icons[value] || "🍽️", labels[value] || value);
+}
+
+function drinksChip(guest) {
+  if (guest.wantsDrinks === "yes") return attrChip("green", "🍺", "Drinks");
+  if (guest.wantsDrinks === "soft") return attrChip("blue", "🥤", "Soft drinks only");
+  return attrChip("gray", "💧", "Bringing own drinks");
+}
+
+function experienceChip(guest) {
+  if (!guest.kayakExperience) return "";
+  const icons = { beginner: "🐘", intermediate: "🌊", experienced: "🏆" };
+  return attrChip("gray", icons[guest.kayakExperience] || "🛶", labelExperience(guest.kayakExperience));
+}
+
+function saunaChip(guest) {
+  if (!guest.wantsSauna) return "";
+  return attrChip("green", "🧖", "Sauna");
 }
 
 function fillSettingsForm() {
