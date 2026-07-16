@@ -6,6 +6,14 @@
 | --- | --- |
 | July 25-26, 2026 | Salaca river, Latvia ([Starting point](https://maps.app.goo.gl/X5cXqBSW7F3EnQNt5), [Campsite](https://maps.app.goo.gl/pEvyUhNnkFY259B4A)) |
 
+| Time | Agenda |
+| --- | --- |
+| 10:45 | Drivers meet at the starting point |
+| 10:45–11:00 | Everyone offloads kayak gear from the cars |
+| 11:00 | Drivers take cars to the campsite |
+| 11:15 | Drivers board 2 vans at the campsite and return to the starting point |
+| 11:30–12:00 | All boats start going |
+
 # [The route]{.mark}
 
 Salace river is widely considered one of most interesting and beautiful rivers in the Baltics for kayaking: well winding, with some rapids, and scenic cliffs and caves. 
