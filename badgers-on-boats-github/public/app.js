@@ -47,7 +47,7 @@ if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 
 const GUEST_FULL = "*, plus_ones(*)";
 const GUEST_PUBLIC =
-  "id, created_at, updated_at, name, submitter_status, can_drive, starting_from, preferred_car_buddy, kayak_partner_pref, kayak_type_pref, kayak_type_notes, kayak_experience, staying_overnight, has_tent, tent_share_spots, tent_notes, has_sleeping_bag, eating_group_food, dietary_pref, wants_drinks, wants_sauna, can_help_with, plus_ones(name, status)";
+  "id, created_at, updated_at, name, submitter_status, can_drive, starting_from, preferred_car_buddy, kayak_partner_pref, kayak_type_pref, kayak_type_notes, kayak_experience, staying_overnight, has_tent, tent_share_spots, tent_notes, has_sleeping_bag, need_sleeping_bag, tent_preference, eating_group_food, dietary_pref, wants_drinks, wants_sauna, can_help_with, plus_ones(id, name, status, has_tent, tent_share_spots, tent_notes, has_sleeping_bag, need_sleeping_bag, tent_preference)";
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -72,12 +72,23 @@ function mapTrip(row) {
   };
 }
 
-function mapGuest(row) {
-  const plusOnes = (row.plus_ones || []).map((item) => ({
+function mapPlusOne(item) {
+  return {
+    id: item.id,
     name: item.name,
     phone: item.phone || "",
-    status: item.status || "not_bolt"
-  }));
+    status: item.status || "not_bolt",
+    hasTent: item.has_tent || "",
+    tentShareSpots: item.tent_share_spots || 0,
+    tentNotes: item.tent_notes || "",
+    hasSleepingBag: item.has_sleeping_bag || "",
+    needSleepingBag: item.need_sleeping_bag || "",
+    tentPreference: item.tent_preference || ""
+  };
+}
+
+function mapGuest(row) {
+  const plusOnes = (row.plus_ones || []).map(mapPlusOne);
   return {
     id: row.id,
     createdAt: row.created_at,
@@ -100,6 +111,8 @@ function mapGuest(row) {
     tentShareSpots: row.tent_share_spots || 0,
     tentNotes: row.tent_notes,
     hasSleepingBag: row.has_sleeping_bag,
+    needSleepingBag: row.need_sleeping_bag || "",
+    tentPreference: row.tent_preference || "",
     eatingGroupFood: row.eating_group_food,
     dietaryPref: row.dietary_pref,
     allergies: row.allergies,
@@ -156,6 +169,27 @@ function loadPublicState() {
   return loadState(GUEST_PUBLIC);
 }
 
+function preservedTentFields(guest) {
+  if (!guest) {
+    return {
+      has_tent: "",
+      tent_share_spots: null,
+      tent_notes: "",
+      has_sleeping_bag: "",
+      need_sleeping_bag: "",
+      tent_preference: ""
+    };
+  }
+  return {
+    has_tent: guest.hasTent || "",
+    tent_share_spots: guest.tentShareSpots ? Number(guest.tentShareSpots) : null,
+    tent_notes: guest.tentNotes || "",
+    has_sleeping_bag: guest.hasSleepingBag || "",
+    need_sleeping_bag: guest.needSleepingBag || "",
+    tent_preference: guest.tentPreference || ""
+  };
+}
+
 function guestColumns(data) {
   return {
     name: String(data.name || "").trim(),
@@ -174,6 +208,8 @@ function guestColumns(data) {
     tent_share_spots: data.tent_share_spots ? Number(data.tent_share_spots) : null,
     tent_notes: data.tent_notes || "",
     has_sleeping_bag: data.has_sleeping_bag || "",
+    need_sleeping_bag: data.need_sleeping_bag || "",
+    tent_preference: data.tent_preference || "",
     eating_group_food: data.eating_group_food !== false,
     dietary_pref: data.dietary_pref || "meat",
     allergies: data.allergies || "",
@@ -188,16 +224,35 @@ function guestColumns(data) {
 }
 
 async function replacePlusOnes(guestId, plusOnes) {
+  const { data: existing, error: existingError } = await sb.from("plus_ones").select("*").eq("guest_id", guestId);
+  if (existingError) throw new Error(existingError.message);
+  const byId = new Map((existing || []).map((item) => [item.id, item]));
+  const byName = new Map((existing || []).map((item) => [String(item.name || "").trim().toLowerCase(), item]));
+
   const { error: deleteError } = await sb.from("plus_ones").delete().eq("guest_id", guestId);
   if (deleteError) throw new Error(deleteError.message);
   const rows = (plusOnes || [])
     .filter((item) => item && String(item.name || "").trim())
-    .map((item) => ({
-      guest_id: guestId,
-      name: String(item.name).trim(),
-      phone: String(item.phone || "").trim(),
-      status: item.status || "not_bolt"
-    }));
+    .map((item) => {
+      const prev = (item.id && byId.get(item.id)) || byName.get(String(item.name).trim().toLowerCase()) || {};
+      return {
+        guest_id: guestId,
+        name: String(item.name).trim(),
+        phone: String(item.phone || "").trim(),
+        status: item.status || "not_bolt",
+        has_tent: item.has_tent ?? prev.has_tent ?? "",
+        tent_share_spots:
+          item.tent_share_spots != null
+            ? Number(item.tent_share_spots)
+            : prev.tent_share_spots != null
+              ? Number(prev.tent_share_spots)
+              : null,
+        tent_notes: item.tent_notes ?? prev.tent_notes ?? "",
+        has_sleeping_bag: item.has_sleeping_bag ?? prev.has_sleeping_bag ?? "",
+        need_sleeping_bag: item.need_sleeping_bag ?? prev.need_sleeping_bag ?? "",
+        tent_preference: item.tent_preference ?? prev.tent_preference ?? ""
+      };
+    });
   if (rows.length) {
     const { error } = await sb.from("plus_ones").insert(rows);
     if (error) throw new Error(error.message);
@@ -965,8 +1020,6 @@ function selectOption(card) {
     syncPlusOneInputs();
   }
   if (field === "can_drive") toggle("driverSection", value === "yes" || value === "bolt_drive");
-  if (field === "staying_overnight") toggle("overnightSection", value === "yes" || value === "maybe");
-  if (field === "has_tent") toggle("tentShareSection", value === "share");
   if (field === "eating_group_food") toggle("foodSection", value === "yes");
 }
 
@@ -1025,6 +1078,7 @@ function collectData() {
     formState.options.has_plus_ones === "yes"
       ? $$(".plus-one-card")
           .map((card) => ({
+            id: card.dataset.plusOneId || "",
             name: card.querySelector(".po-name").value.trim(),
             phone: card.querySelector(".po-phone").value.trim(),
             status: card.querySelector(".po-status").value
@@ -1048,10 +1102,7 @@ function collectData() {
     kayak_type_notes: $("#f_kayak_type_notes").value.trim(),
     kayak_experience: formState.options.kayak_experience || "",
     staying_overnight: formState.options.staying_overnight || "no",
-    has_tent: formState.options.has_tent || "",
-    tent_share_spots: $("#f_tent_share_spots").value || null,
-    tent_notes: $("#f_tent_notes").value.trim(),
-    has_sleeping_bag: formState.options.has_sleeping_bag || "",
+    ...preservedTentFields(state?.guests?.find((guest) => guest.id === editingGuestId)),
     eating_group_food: formState.options.eating_group_food !== "no",
     dietary_pref: formState.options.dietary_pref || "meat",
     allergies: $("#f_allergies").value.trim(),
@@ -1090,9 +1141,6 @@ function buildReview() {
     ]),
     reviewSection("Overnight and Food", 5, [
       ["Staying", data.staying_overnight],
-      ["Tent", labelTent(data.has_tent)],
-      ["Tent spots", data.has_tent === "share" ? data.tent_share_spots || "1" : "-"],
-      ["Tent notes", data.tent_notes || "-"],
       ["Food", data.eating_group_food ? data.dietary_pref : "Bringing own"],
       ["Allergies", data.allergies || "-"],
       ["Drinks", drinksLabel],
@@ -1184,6 +1232,7 @@ function loadGuestForEdit(guest) {
     guest.plusOnes.forEach((plusOne) => {
       addPlusOne();
       const card = $("#plusOneList").lastElementChild;
+      if (plusOne.id) card.dataset.plusOneId = plusOne.id;
       card.querySelector(".po-name").value = plusOne.name || "";
       card.querySelector(".po-phone").value = plusOne.phone || "";
       card.querySelector(".po-status").value = plusOne.status || "not_bolt";
@@ -1200,10 +1249,6 @@ function loadGuestForEdit(guest) {
   $("#f_kayak_type_notes").value = guest.kayakTypeNotes || "";
   setOption("kayak_experience", guest.kayakExperience || "intermediate");
   setOption("staying_overnight", guest.stayingOvernight || "no");
-  setOption("has_tent", guest.hasTent || "");
-  $("#f_tent_share_spots").value = guest.tentShareSpots || "";
-  $("#f_tent_notes").value = guest.tentNotes || "";
-  setOption("has_sleeping_bag", guest.hasSleepingBag || "");
   setOption("eating_group_food", guest.eatingGroupFood === false ? "no" : "yes");
   setOption("dietary_pref", guest.dietaryPref || "meat");
   $("#f_allergies").value = guest.allergies || "";
@@ -1226,7 +1271,7 @@ function applyFieldLocks() {
     contact: ["#f_name", "#f_email", "#f_phone", '[data-field="submitter_status"]'],
     transport: ['[data-field="can_drive"]', "#f_total_seats", "#f_starting_from", "#f_starting_from_custom", "#f_preferred_car_buddy"],
     kayak: ["#f_kayak_partner", "#f_kayak_type", "#f_kayak_type_notes", '[data-field="kayak_experience"]'],
-    overnight: ['[data-field="staying_overnight"]', '[data-field="has_tent"]', "#f_tent_share_spots", "#f_tent_notes", '[data-field="has_sleeping_bag"]'],
+    overnight: ['[data-field="staying_overnight"]'],
     food: ['[data-field="eating_group_food"]', '[data-field="dietary_pref"]', "#f_allergies", '[data-field="wants_drinks"]', '[data-field="wants_sauna"]']
   };
   Object.entries(groups).forEach(([group, selectors]) => {
@@ -1253,8 +1298,6 @@ function profileSelectOption(card) {
     syncProfilePlusOneInputs();
   }
   if (field === "can_drive") profileToggle("p_driverSection", value === "yes" || value === "bolt_drive");
-  if (field === "staying_overnight") profileToggle("p_overnightSection", value === "yes" || value === "maybe");
-  if (field === "has_tent") profileToggle("p_tentShareSection", value === "share");
   if (field === "eating_group_food") profileToggle("p_foodSection", value === "yes");
 }
 
@@ -1317,7 +1360,7 @@ function resetProfileFields() {
   $$("#profile .conditional").forEach((item) => {
     if (item.id !== "profileVerify") item.classList.remove("show");
   });
-  ["p_total_seats", "p_starting_from", "p_starting_from_custom", "p_kayak_type_notes", "p_tent_share_spots", "p_tent_notes", "p_allergies", "p_emergency_name", "p_emergency_phone", "p_comments"].forEach((id) => {
+  ["p_total_seats", "p_starting_from", "p_starting_from_custom", "p_kayak_type_notes", "p_allergies", "p_emergency_name", "p_emergency_phone", "p_comments"].forEach((id) => {
     const el = $(`#${id}`);
     if (el) el.value = "";
   });
@@ -1337,6 +1380,7 @@ function loadProfile(guest) {
     profilePlusOneCount = 0;
     guest.plusOnes.forEach((plusOne) => {
       const card = addProfilePlusOne();
+      if (plusOne.id) card.dataset.plusOneId = plusOne.id;
       card.querySelector(".po-name").value = plusOne.name || "";
       card.querySelector(".po-phone").value = plusOne.phone || "";
       card.querySelector(".po-status").value = plusOne.status || "not_bolt";
@@ -1354,10 +1398,6 @@ function loadProfile(guest) {
   $("#p_kayak_type_notes").value = guest.kayakTypeNotes || "";
   profileSetOption("kayak_experience", guest.kayakExperience || "intermediate");
   profileSetOption("staying_overnight", guest.stayingOvernight || "no");
-  profileSetOption("has_tent", guest.hasTent || "");
-  $("#p_tent_share_spots").value = guest.tentShareSpots || "";
-  $("#p_tent_notes").value = guest.tentNotes || "";
-  profileSetOption("has_sleeping_bag", guest.hasSleepingBag || "");
   profileSetOption("eating_group_food", guest.eatingGroupFood === false ? "no" : "yes");
   profileSetOption("dietary_pref", guest.dietaryPref || "meat");
   $("#p_allergies").value = guest.allergies || "";
@@ -1379,7 +1419,7 @@ function applyProfileFieldLocks() {
     contact: ['#profile [data-field="submitter_status"]'],
     transport: ['#profile [data-field="can_drive"]', "#p_total_seats", "#p_starting_from", "#p_starting_from_custom", "#p_preferred_car_buddy"],
     kayak: ["#p_kayak_partner", "#p_kayak_type", "#p_kayak_type_notes", '#profile [data-field="kayak_experience"]'],
-    overnight: ['#profile [data-field="staying_overnight"]', '#profile [data-field="has_tent"]', "#p_tent_share_spots", "#p_tent_notes", '#profile [data-field="has_sleeping_bag"]'],
+    overnight: ['#profile [data-field="staying_overnight"]'],
     food: ['#profile [data-field="eating_group_food"]', '#profile [data-field="dietary_pref"]', "#p_allergies", '#profile [data-field="wants_drinks"]', '#profile [data-field="wants_sauna"]']
   };
   Object.entries(groups).forEach(([group, selectors]) => {
@@ -1401,6 +1441,7 @@ function collectProfileData() {
     profileState.options.has_plus_ones === "yes"
       ? $$("#p_plusOneList .plus-one-card")
           .map((card) => ({
+            id: card.dataset.plusOneId || "",
             name: card.querySelector(".po-name").value.trim(),
             phone: card.querySelector(".po-phone").value.trim(),
             status: card.querySelector(".po-status").value
@@ -1424,10 +1465,7 @@ function collectProfileData() {
     kayak_type_notes: $("#p_kayak_type_notes").value.trim(),
     kayak_experience: profileState.options.kayak_experience || "",
     staying_overnight: profileState.options.staying_overnight || "no",
-    has_tent: profileState.options.has_tent || "",
-    tent_share_spots: $("#p_tent_share_spots").value || null,
-    tent_notes: $("#p_tent_notes").value.trim(),
-    has_sleeping_bag: profileState.options.has_sleeping_bag || "",
+    ...preservedTentFields(profileGuest),
     eating_group_food: profileState.options.eating_group_food !== "no",
     dietary_pref: profileState.options.dietary_pref || "meat",
     allergies: $("#p_allergies").value.trim(),
@@ -1528,8 +1566,6 @@ function renderGuestList() {
             <th>Name</th>
             <th>Bolt</th>
             <th>Overnight</th>
-            <th>Tent</th>
-            <th>Sleeping bag</th>
             <th>Food</th>
             <th>Diet</th>
             <th>Drinks</th>
@@ -1553,8 +1589,6 @@ function guestTableRows(guest) {
     <td data-label="Name"><span class="guest-row-name">${escapeHtml(guest.name)}</span></td>
     <td data-label="Bolt">${boltChip(guest.submitterStatus)}</td>
     <td data-label="Overnight">${overnightBadge(guest.stayingOvernight)}</td>
-    <td data-label="Tent">${tentChip(guest) || "-"}</td>
-    <td data-label="Sleeping bag">${sleepingBagChip(guest) || "-"}</td>
     <td data-label="Food">${foodChip(guest)}</td>
     <td data-label="Diet">${dietaryChip(guest) || "-"}</td>
     <td data-label="Drinks">${drinksChip(guest)}</td>
@@ -1566,7 +1600,7 @@ function guestTableRows(guest) {
       (plusOne) => `<tr class="is-plusone">
         <td data-label="Name"><span class="plusone-connector" aria-hidden="true">↳</span><span class="guest-row-name">${escapeHtml(plusOne.name)}</span><span class="plus-one-badge">+1</span></td>
         <td data-label="Bolt">${boltChip(plusOne.status)}</td>
-        <td data-label="Details" colspan="8"><span class="guest-table-muted">Shares ${escapeHtml(guest.name)}'s overnight/food/drinks details</span></td>
+        <td data-label="Details" colspan="6"><span class="guest-table-muted">Shares ${escapeHtml(guest.name)}'s overnight/food/drinks details</span></td>
       </tr>`
     )
     .join("");
@@ -1579,21 +1613,6 @@ function boltChip(status) {
 
 function attrChip(tone, icon, label) {
   return `<span class="attr-chip tone-${tone}" title="${escapeHtml(label)}">${icon} ${escapeHtml(label)}</span>`;
-}
-
-function tentChip(guest) {
-  if (guest.stayingOvernight === "no") return "";
-  if (guest.hasTent === "yes") return attrChip("green", "🏕️", "Own tent");
-  if (guest.hasTent === "share") return attrChip("blue", "🏕️", "Can share tent");
-  if (guest.hasTent === "no") return attrChip("amber", "🏕️", "Needs tent");
-  return "";
-}
-
-function sleepingBagChip(guest) {
-  if (guest.stayingOvernight === "no") return "";
-  if (guest.hasSleepingBag === "yes") return attrChip("green", "🛏️", "Has bag & mat");
-  if (guest.hasSleepingBag === "no") return attrChip("amber", "🛏️", "Needs bag & mat");
-  return "";
 }
 
 function foodChip(guest) {
@@ -1644,10 +1663,6 @@ function labelDriver(value) {
 
 function labelStay(value) {
   return { yes: "Overnight", maybe: "Maybe overnight", no: "Day trip" }[value] || "Day trip";
-}
-
-function labelTent(value) {
-  return { yes: "Bringing own", share: "Can share", no: "Needs tent" }[value] || "-";
 }
 
 function labelBoltStatus(value) {
