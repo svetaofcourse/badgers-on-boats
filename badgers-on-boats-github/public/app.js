@@ -1894,8 +1894,13 @@ function exportCsv() {
   const link = document.createElement("a");
   link.href = url;
   link.download = "kayak-trip-registrations.csv";
+  link.style.display = "none";
+  document.body.appendChild(link);
   link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 60000);
 }
 
 function csvCell(value) {
@@ -1983,6 +1988,10 @@ function labelDriver(value) {
 
 function labelStay(value) {
   return { yes: "Overnight", maybe: "Maybe overnight", no: "Day trip" }[value] || "Day trip";
+}
+
+function labelTent(value) {
+  return { yes: "Bringing own", share: "Can share", no: "Needs tent" }[value] || "-";
 }
 
 function labelBoltStatus(value) {
