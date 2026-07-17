@@ -7,9 +7,11 @@ const sb = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 let state = null;
 let tripId = "";
+let adminUnlocked = false;
 let currentStep = 0;
 let plusOneCount = 0;
 let editingGuestId = "";
+let editingAsAdmin = false;
 let selectedPerson = null;
 let transportData = null;
 let openPickerCarId = null;
@@ -132,7 +134,7 @@ function mapGuest(row) {
 async function fetchTrip() {
   const { data, error } = await sb
     .from("trips")
-    .select("id, title, date, location, meeting_point, intro, locked_fields, registration_open, is_active, created_at")
+    .select("*")
     .eq("is_active", true)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -167,6 +169,10 @@ async function loadState(select) {
 
 function loadPublicState() {
   return loadState(GUEST_PUBLIC);
+}
+
+function loadAdminState() {
+  return loadState(GUEST_FULL);
 }
 
 function preservedTentFields(guest) {
@@ -300,7 +306,7 @@ async function syncDriverCar(guestId, canDrive, seats) {
   }
 }
 
-async function saveGuest(data) {
+async function saveGuest(data, asAdmin = false) {
   const cols = guestColumns(data);
   if (!cols.name || !cols.email || !cols.phone) {
     throw new Error("Name, email, and phone are required.");
@@ -331,7 +337,7 @@ async function saveGuest(data) {
   }
   await replacePlusOnes(guestId, data.plus_ones);
   await syncDriverCar(guestId, cols.can_drive, data.total_seats ? Number(data.total_seats) : 0);
-  return loadPublicState();
+  return asAdmin ? loadAdminState() : loadPublicState();
 }
 
 async function lookupGuest(email, phone) {
@@ -344,6 +350,39 @@ async function lookupGuest(email, phone) {
   );
   if (!match) throw new Error("No registration found for that email and phone.");
   return mapGuest(match);
+}
+
+async function adminLogin(pin) {
+  const tripRow = await fetchTrip();
+  tripId = tripRow.id;
+  if (String(pin || "").trim() !== String(tripRow.admin_pin || "")) {
+    throw new Error("Wrong key");
+  }
+  return true;
+}
+
+async function saveSettings(trip) {
+  const { error } = await sb
+    .from("trips")
+    .update({
+      title: trip.title,
+      date: trip.date,
+      location: trip.location,
+      meeting_point: trip.meetingPoint,
+      intro: trip.intro,
+      locked_fields: trip.lockedFields || [],
+      registration_open: trip.registrationOpen !== false,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", tripId);
+  if (error) throw new Error(error.message);
+  return loadAdminState();
+}
+
+async function deleteGuest(id) {
+  const { error } = await sb.from("guests").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return loadAdminState();
 }
 
 async function loadTransport() {
@@ -1167,14 +1206,14 @@ function reviewSection(title, step, rows) {
 async function submitGuest() {
   const button = $("#nextBtn");
   const data = collectData();
-  if (!editingGuestId && !isRegistrationOpen()) {
+  if (!editingGuestId && !editingAsAdmin && !isRegistrationOpen()) {
     $("#guestStatus").textContent = "Registration is closed.";
     return;
   }
   try {
     button.disabled = true;
     button.textContent = editingGuestId ? "Updating..." : "Submitting...";
-    state = await saveGuest(data);
+    state = await saveGuest(data, editingAsAdmin);
     $("#app").classList.add("hidden");
     $("#successPanel").classList.remove("hidden");
     $("#guestStatus").textContent = "";
@@ -1194,6 +1233,7 @@ function resetFormFlow() {
   $("#plusOneList").innerHTML = "";
   plusOneCount = 0;
   editingGuestId = "";
+  editingAsAdmin = false;
   formState.helpWith = [];
   formState.options = {
     has_plus_ones: "no",
@@ -1215,12 +1255,13 @@ function resetFormFlow() {
   goToStep(0);
 }
 
-function loadGuestForEdit(guest) {
+function loadGuestForEdit(guest, asAdmin = false) {
   resetFormFlow();
   document.body.classList.remove("panel-open");
   $$(".registration-side-panel").forEach((el) => el.classList.remove("page-active"));
   history.replaceState(null, "", location.pathname);
   editingGuestId = guest.id;
+  editingAsAdmin = asAdmin;
   $("#f_name").value = guest.name || "";
   $("#f_email").value = guest.email || "";
   $("#f_phone").value = guest.phone || "";
@@ -1266,7 +1307,7 @@ function loadGuestForEdit(guest) {
 }
 
 function applyFieldLocks() {
-  const locked = editingGuestId ? state.trip.lockedFields || [] : [];
+  const locked = editingGuestId && !editingAsAdmin ? state.trip.lockedFields || [] : [];
   const groups = {
     contact: ["#f_name", "#f_email", "#f_phone", '[data-field="submitter_status"]'],
     transport: ['[data-field="can_drive"]', "#f_total_seats", "#f_starting_from", "#f_starting_from_custom", "#f_preferred_car_buddy"],
@@ -1496,7 +1537,7 @@ async function saveProfile() {
     button.disabled = true;
     button.textContent = "Saving...";
     status.textContent = "";
-    state = await saveGuest(data);
+    state = await saveGuest(data, false);
     renderTripView();
     renderTransport();
     status.textContent = "Saved.";
@@ -1649,6 +1690,285 @@ function saunaChip(guest) {
   return attrChip("green", "🧖", "Sauna");
 }
 
+function fillSettingsForm() {
+  const form = $("#settingsForm");
+  Object.entries(state.trip).forEach(([key, value]) => {
+    const input = form.elements[key];
+    if (!input) return;
+    if (key === "lockedFields" || key === "registrationOpen") return;
+    input.value = Array.isArray(value) ? value.join("\n") : value;
+  });
+  $$('input[name="lockedFields"]').forEach((input) => {
+    input.checked = (state.trip.lockedFields || []).includes(input.value);
+  });
+  form.elements.registrationOpen.checked = state.trip.registrationOpen !== false;
+}
+
+function renderAdmin() {
+  $("#adminCount").textContent = `${state.guests.length} registered`;
+  renderOverview();
+  renderAssignments();
+  renderTransportBoard();
+  renderAdminGuests();
+}
+
+function renderOverview() {
+  const diet = countBy(state.guests.filter((guest) => guest.eatingGroupFood), "dietaryPref");
+  $("#overviewGrid").innerHTML = [
+    ["Registered", state.guests.length],
+    ["People", participantCount()],
+    ["Drivers", driverCount()],
+    ["Total seats", seatCount()],
+    ["Overnight", overnightCount()],
+    ["Need tent", state.guests.filter((guest) => guest.stayingOvernight === "yes" && guest.hasTent === "no").length],
+    ["Can share tent", state.guests.filter((guest) => isOvernight(guest) && guest.hasTent === "share").length],
+    ["Meat", diet.meat || 0],
+    ["Veg/Vegan", (diet.vegetarian || 0) + (diet.vegan || 0)]
+  ]
+    .map(([label, value]) => `<div class="stat-card"><div class="stat-value">${escapeHtml(value)}</div><div class="stat-label">${escapeHtml(label)}</div></div>`)
+    .join("");
+}
+
+function renderAssignments() {
+  $("#assignmentBoard").innerHTML = [
+    assignmentColumn("Cars", buildCarAssignments()),
+    assignmentColumn("Tents", buildTentAssignments())
+  ].join("");
+}
+
+function assignmentColumn(title, items) {
+  const content = items.length
+    ? items.map((item) => `<li class="${item.warning ? "warning" : ""}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.detail)}</span></li>`).join("")
+    : `<li><span>No recommendations yet.</span></li>`;
+  return `<section class="assignment-column"><h4>${escapeHtml(title)}</h4><ul>${content}</ul></section>`;
+}
+
+function buildCarAssignments() {
+  const drivers = state.guests
+    .filter((guest) => ["yes", "bolt_drive"].includes(guest.canDrive))
+    .map((guest) => ({
+      guest,
+      overnight: isOvernight(guest),
+      remaining: Math.max(0, Number(guest.totalSeats || 0) - partySize(guest)),
+      passengers: []
+    }));
+  const passengers = state.guests
+    .filter((guest) => !["yes", "bolt_drive"].includes(guest.canDrive))
+    .map((guest) => ({ guest, overnight: isOvernight(guest), size: partySize(guest) }));
+  const items = [];
+
+  passengers.forEach((passenger) => {
+    const exact = drivers.find((driver) => driver.overnight === passenger.overnight && driver.remaining >= passenger.size);
+    const fallback = exact || drivers.find((driver) => driver.remaining >= passenger.size);
+    if (!fallback) {
+      items.push({
+        title: `Find ride for ${partyLabel(passenger.guest)}`,
+        detail: `${labelStay(passenger.guest.stayingOvernight)} from ${passenger.guest.startingFrom || "TBD"}`,
+        warning: true
+      });
+      return;
+    }
+    fallback.remaining -= passenger.size;
+    fallback.passengers.push(passenger);
+  });
+
+  drivers.forEach((driver) => {
+    const passengerNames = driver.passengers.map((item) => partyLabel(item.guest)).join(", ");
+    const mismatch = driver.passengers.some((item) => item.overnight !== driver.overnight);
+    items.push({
+      title: passengerNames ? `${partyLabel(driver.guest)} + ${passengerNames}` : `${partyLabel(driver.guest)} has ${driver.remaining} open seat${driver.remaining === 1 ? "" : "s"}`,
+      detail: `${labelDriver(driver.guest.canDrive)}, ${labelStay(driver.guest.stayingOvernight)}${mismatch ? " - check return/stay mismatch" : ""}`,
+      warning: mismatch
+    });
+  });
+
+  return items;
+}
+
+function buildTentAssignments() {
+  const hosts = state.guests
+    .filter((guest) => isOvernight(guest) && ["yes", "share"].includes(guest.hasTent))
+    .map((guest) => ({ guest, open: guest.hasTent === "share" ? Math.max(1, Number(guest.tentShareSpots || 1)) : 0, assigned: [] }));
+  const needTent = state.guests.filter((guest) => isOvernight(guest) && guest.hasTent === "no");
+  const items = [];
+
+  needTent.forEach((guest) => {
+    const host = hosts.find((item) => item.open > 0);
+    if (!host) {
+      items.push({
+        title: `Tent needed for ${partyLabel(guest)}`,
+        detail: "No sharing tent marked available.",
+        warning: true
+      });
+      return;
+    }
+    host.open -= 1;
+    host.assigned.push(guest);
+  });
+
+  hosts.forEach((host) => {
+    if (!host.assigned.length && host.guest.hasTent !== "share") return;
+    items.push({
+      title: host.assigned.length ? `${partyLabel(host.guest)} shares with ${host.assigned.map(partyLabel).join(", ")}` : `${partyLabel(host.guest)} can share a tent`,
+      detail: `${host.open ? `${host.open} open sharing spot${host.open === 1 ? "" : "s"}` : "Tent spot assigned"}${host.guest.tentNotes ? ` - ${host.guest.tentNotes}` : ""}`,
+      warning: false
+    });
+  });
+
+  return items;
+}
+
+function partySize(guest) {
+  return 1 + (guest.plusOnes?.length || (guest.plusOne ? 1 : 0));
+}
+
+function partyLabel(guest) {
+  return `${guest.name}${partySize(guest) > 1 ? ` party (${partySize(guest)})` : ""}`;
+}
+
+function isOvernight(guest) {
+  return guest.stayingOvernight === "yes" || guest.stayOvernight;
+}
+
+function exportCsv() {
+  const headers = [
+    "Name",
+    "Email",
+    "Phone",
+    "Bolt connection",
+    "Plus ones",
+    "Plus one statuses",
+    "Driver",
+    "Seats",
+    "Starting from",
+    "Kayak partner",
+    "Kayak type",
+    "Kayak notes",
+    "Experience",
+    "Overnight",
+    "Tent",
+    "Tent share spots",
+    "Tent notes",
+    "Sleeping bag",
+    "Food",
+    "Allergies",
+    "Drinks",
+    "Sauna",
+    "Help",
+    "Emergency contact",
+    "Emergency phone",
+    "Notes",
+    "Created"
+  ];
+  const rows = state.guests.map((guest) => [
+    guest.name,
+    guest.email,
+    guest.phone,
+    labelBoltStatus(guest.submitterStatus),
+    guest.plusOneName,
+    guest.plusOnes?.map((item) => `${item.name}: ${labelBoltStatus(item.status)}`).join("; "),
+    labelDriver(guest.canDrive),
+    guest.totalSeats || "",
+    guest.startingFrom,
+    guest.kayakPartnerPref,
+    labelKayakType(guest.kayakTypePref),
+    guest.kayakTypeNotes,
+    labelExperience(guest.kayakExperience),
+    labelStay(guest.stayingOvernight),
+    labelTent(guest.hasTent),
+    guest.tentShareSpots,
+    guest.tentNotes,
+    guest.hasSleepingBag,
+    guest.eatingGroupFood ? guest.dietaryPref : "own food",
+    guest.allergies,
+    guest.wantsDrinks,
+    guest.wantsSauna ? "yes" : "no",
+    guest.canHelpWith?.join(", "),
+    guest.emergencyContactName,
+    guest.emergencyContactPhone,
+    guest.comments || guest.notes,
+    guest.createdAt
+  ]);
+  const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n")}`;
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "kayak-trip-registrations.csv";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function csvCell(value) {
+  return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function renderTransportBoard() {
+  const drivers = state.guests.filter((guest) => ["yes", "bolt_drive"].includes(guest.canDrive));
+  const passengers = state.guests.filter((guest) => !["yes", "bolt_drive"].includes(guest.canDrive));
+  $("#transportBoard").innerHTML = [
+    boardColumn("Drivers", drivers, (guest) => `${guest.totalSeats || "?"} seats, ${guest.startingFrom || "from TBD"}`),
+    boardColumn("Passengers", passengers, (guest) => `${guest.startingFrom || "from TBD"}${guest.preferredCarBuddy ? `, with ${guest.preferredCarBuddy}` : ""}`),
+    boardColumn("Overnight", state.guests.filter((guest) => guest.stayingOvernight === "yes"), (guest) => `Tent: ${guest.hasTent || "-"}, bag: ${guest.hasSleepingBag || "-"}`),
+    boardColumn("Helpers", state.guests.filter((guest) => guest.canHelpWith?.length), (guest) => guest.canHelpWith.join(", "))
+  ].join("");
+}
+
+function boardColumn(title, guests, lineRenderer) {
+  const items = guests.length
+    ? guests.map((guest) => `<li><strong>${escapeHtml(guest.name)}</strong><span>${escapeHtml(lineRenderer(guest))}</span></li>`).join("")
+    : `<li><span>None yet</span></li>`;
+  return `<section class="board-column"><h4>${escapeHtml(title)}</h4><ul>${items}</ul></section>`;
+}
+
+function renderAdminGuests() {
+  const container = $("#adminGuests");
+  if (!state.guests.length) {
+    container.innerHTML = `<p>No registrations yet.</p>`;
+    return;
+  }
+  container.innerHTML = state.guests
+    .map((guest) => `<article class="admin-card">
+      <div>
+        <h4>${escapeHtml(guest.name)}</h4>
+        <p>${new Date(guest.createdAt).toLocaleString()}</p>
+      </div>
+      <dl>
+        ${detail("Email", guest.email || "-")}
+        ${detail("Phone", guest.phone || "-")}
+        ${detail("Bolt connection", labelBoltStatus(guest.submitterStatus))}
+        ${detail("+1s", guest.plusOneName || "-")}
+        ${detail("+1 status", guest.plusOnes?.map((item) => `${item.name}: ${labelBoltStatus(item.status)}`).join(", ") || "-")}
+        ${detail("Driver", labelDriver(guest.canDrive))}
+        ${detail("Seats", guest.totalSeats || "-")}
+        ${detail("Start", guest.startingFrom || "-")}
+        ${detail("Kayak partner", guest.kayakPartnerPref || "Assign")}
+        ${detail("Kayak type", labelKayakType(guest.kayakTypePref))}
+        ${detail("Kayak notes", guest.kayakTypeNotes || "-")}
+        ${detail("Experience", labelExperience(guest.kayakExperience))}
+        ${detail("Overnight", labelStay(guest.stayingOvernight))}
+        ${detail("Tent", labelTent(guest.hasTent))}
+        ${detail("Tent share", guest.hasTent === "share" ? `${guest.tentShareSpots || 1} spot${Number(guest.tentShareSpots || 1) === 1 ? "" : "s"}` : "-")}
+        ${detail("Tent notes", guest.tentNotes || "-")}
+        ${detail("Food", guest.eatingGroupFood ? guest.dietaryPref : "Own")}
+        ${detail("Allergies", guest.allergies || "-")}
+        ${detail("Drinks", guest.wantsDrinks || "no")}
+        ${detail("Sauna", guest.wantsSauna ? "Yes" : "No")}
+        ${detail("Help", guest.canHelpWith?.join(", ") || "-")}
+        ${detail("Emergency", guest.emergencyContactName ? `${guest.emergencyContactName} ${guest.emergencyContactPhone || ""}` : "-")}
+        ${detail("Notes", guest.comments || guest.notes || "-")}
+      </dl>
+      <div class="admin-card-actions">
+        <button class="nav-btn secondary compact" data-edit="${guest.id}" type="button">Edit</button>
+        <button class="nav-btn danger" data-delete="${guest.id}" type="button">Remove</button>
+      </div>
+    </article>`)
+    .join("");
+}
+
+function detail(label, value) {
+  return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
+}
+
 function countBy(items, key) {
   return items.reduce((counts, item) => {
     const value = item[key] || "unknown";
@@ -1727,7 +2047,7 @@ async function renderGuide() {
   }
 }
 
-const PANEL_ROUTES = ["guests", "transport", "fleet", "guide", "profile"];
+const PANEL_ROUTES = ["guests", "transport", "fleet", "guide", "profile", "admin"];
 
 function currentRoute() {
   const hash = (location.hash || "").replace(/^#\/?/, "");
@@ -1818,6 +2138,61 @@ document.addEventListener("keydown", (event) => {
 $("#f_starting_from").addEventListener("change", (event) => {
   toggle("customStartSection", event.target.value === "other");
 });
+
+$("#adminLogin").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const pin = event.currentTarget.elements.pin.value;
+  try {
+    await adminLogin(pin);
+    adminUnlocked = true;
+    state = await loadAdminState();
+    $("#adminPanel").classList.remove("hidden");
+    fillSettingsForm();
+    renderAdmin();
+  } catch {
+    event.currentTarget.elements.pin.value = "";
+    event.currentTarget.elements.pin.placeholder = "Wrong key";
+  }
+});
+
+$("#settingsForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const data = Object.fromEntries(new FormData(form).entries());
+  try {
+    state = await saveSettings({
+      title: data.title,
+      date: data.date,
+      location: data.location,
+      meetingPoint: data.meetingPoint,
+      lockedFields: new FormData(form).getAll("lockedFields"),
+      registrationOpen: form.elements.registrationOpen.checked,
+      intro: data.intro
+    });
+    $("#settingsStatus").textContent = "Settings saved.";
+    renderTripView();
+    renderAdmin();
+  } catch (error) {
+    $("#settingsStatus").textContent = error.message;
+  }
+});
+
+$("#adminGuests").addEventListener("click", async (event) => {
+  const edit = event.target.closest("[data-edit]");
+  if (edit) {
+    const guest = state.guests.find((item) => item.id === edit.dataset.edit);
+    if (guest) loadGuestForEdit(guest, true);
+    return;
+  }
+  const button = event.target.closest("[data-delete]");
+  if (!button) return;
+  state = await deleteGuest(button.dataset.delete);
+  renderTripView();
+  renderAdmin();
+  renderTransport();
+});
+
+$("#exportCsvButton").addEventListener("click", exportCsv);
 
 $("#transport").addEventListener("click", (event) => {
   const chip = event.target.closest(".person-chip[data-person-id]");

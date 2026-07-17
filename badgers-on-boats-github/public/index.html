@@ -16,6 +16,7 @@
           <a href="#fleet">Fleet</a>
           <a href="#guide">Guide</a>
           <a href="#profile">My profile</a>
+          <a href="#admin">Admin</a>
         </nav>
         <div class="step-counter" id="stepCounter"></div>
       </header>
@@ -445,6 +446,64 @@
             <p class="form-status" id="profileSaveStatus" role="status"></p>
             <button class="nav-btn primary" id="profileSaveBtn" type="button">Save changes</button>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-container registration-side-panel" id="admin">
+      <div class="admin-header">
+        <div>
+          <h2>Kayak Trip Admin</h2>
+          <p id="adminCount">0 registered</p>
+        </div>
+        <form class="login" id="adminLogin">
+          <input name="pin" type="password" placeholder="Admin key" required />
+          <button class="nav-btn primary" type="submit">Unlock</button>
+        </form>
+      </div>
+
+      <div class="admin-grid hidden" id="adminPanel">
+        <form class="card" id="settingsForm">
+          <h3>Trip settings</h3>
+          <label class="field-group">Title <input name="title" /></label>
+          <label class="field-group">Date note <input name="date" /></label>
+          <label class="field-group">Destination <input name="location" /></label>
+          <label class="field-group">Meeting point <input name="meetingPoint" /></label>
+          <label class="field-group">Intro <textarea name="intro" rows="3"></textarea></label>
+          <label class="toggle-line"><input name="registrationOpen" type="checkbox" /> Registration open (uncheck to show "Trip full")</label>
+          <fieldset class="lock-fieldset">
+            <legend>Locked edit sections</legend>
+            <label><input name="lockedFields" type="checkbox" value="contact" /> Contact</label>
+            <label><input name="lockedFields" type="checkbox" value="transport" /> Transport</label>
+            <label><input name="lockedFields" type="checkbox" value="kayak" /> Kayak</label>
+            <label><input name="lockedFields" type="checkbox" value="overnight" /> Overnight</label>
+            <label><input name="lockedFields" type="checkbox" value="food" /> Food</label>
+          </fieldset>
+          <button class="nav-btn primary" type="submit">Save settings</button>
+          <p class="form-status" id="settingsStatus" role="status"></p>
+        </form>
+
+        <div class="card">
+          <div class="card-title-row">
+            <h3>Overview</h3>
+            <button class="nav-btn secondary compact" id="exportCsvButton" type="button">Export CSV</button>
+          </div>
+          <div class="stat-grid" id="overviewGrid"></div>
+        </div>
+
+        <div class="card wide">
+          <h3>Recommended assignments</h3>
+          <div class="assignment-grid" id="assignmentBoard"></div>
+        </div>
+
+        <div class="card wide">
+          <h3>Transport</h3>
+          <div class="admin-board" id="transportBoard"></div>
+        </div>
+
+        <div class="card wide">
+          <h3>All registrations</h3>
+          <div class="admin-guests" id="adminGuests"></div>
         </div>
       </div>
     </section>
